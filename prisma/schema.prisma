@@ -15,22 +15,24 @@ datasource db {
 
 // User and Authentication
 model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  name          String
-  passwordHash  String
-  role          Role     @default(VIEWER)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
-  projects      ProjectMember[]
-  auditLogs     AuditLog[]
-  createdProjects Project[] @relation("ProjectCreator")
-  createdTasks  Task[]
-  assignedTasks Task[] @relation("TaskAssignee")
-  issues        Issue[]
-  rfis          RFI[]
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role     @default(VIEWER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  projects            ProjectMember[]
+  auditLogs           AuditLog[]
+  createdProjects     Project[]            @relation("ProjectCreator")
+  createdTasks        Task[]
+  assignedTasks       Task[]               @relation("TaskAssignee")
+  issues              Issue[]
+  rfis                RFI[]
   resourceAllocations ResourceAllocation[]
+  actions             Action[]
+  createdAttachments  Attachment[]
 }
 
 enum Role {
@@ -43,35 +45,41 @@ enum Role {
 
 // Project Register
 model Project {
-  id              String   @id @default(cuid())
-  projectNumber   String   @unique
-  name            String
-  description     String?
-  status          ProjectStatus @default(PLANNING)
-  startDate       DateTime
-  endDate         DateTime
-  budget          Float
-  actualCost      Float    @default(0)
-  currency        String   @default("GBP")
-  location        String?
-  client          String?
-  
-  createdById     String
-  createdBy       User     @relation("ProjectCreator", fields: [createdById], references: [id])
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  members         ProjectMember[]
-  risks           Risk[]
-  changes         ChangeOrder[]
-  tasks           Task[]
-  sprints         Sprint[]
-  resources       ResourceAllocation[]
-  cashflows       Cashflow[]
-  issues          Issue[]
-  rfis            RFI[]
-  procurements    Procurement[]
-  auditLogs       AuditLog[]
+  id            String        @id @default(cuid())
+  projectNumber String        @unique
+  name          String
+  description   String?
+  status        ProjectStatus @default(PLANNING)
+  startDate     DateTime
+  endDate       DateTime
+  budget        Float
+  actualCost    Float         @default(0)
+  currency      String        @default("GBP")
+  location      String?
+  client        String?
+
+  createdById String
+  createdBy   User     @relation("ProjectCreator", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members      ProjectMember[]
+  risks        Risk[]
+  changes      ChangeOrder[]
+  tasks        Task[]
+  sprints      Sprint[]
+  resources    ResourceAllocation[]
+  cashflows    Cashflow[]
+  issues       Issue[]
+  rfis         RFI[]
+  procurements Procurement[]
+  auditLogs    AuditLog[]
+  milestones   Milestone[]
+  budgetLines  BudgetLine[]
+  decisions    Decision[]
+  submittals   Submittal[]
+  attachments  Attachment[]
+  actions      Action[]
 }
 
 enum ProjectStatus {
@@ -83,39 +91,39 @@ enum ProjectStatus {
 }
 
 model ProjectMember {
-  id          String   @id @default(cuid())
-  projectId   String
-  userId      String
-  role        String
-  joinedAt    DateTime @default(now())
-  
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String
+  role      String
+  joinedAt  DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([projectId, userId])
 }
 
 // Risk Register
 model Risk {
-  id              String   @id @default(cuid())
-  projectId       String
-  riskNumber      String
-  title           String
-  description     String
-  category        String
-  probability     Int      // 1-5
-  impact          Int      // 1-5
-  score           Int      // probability * impact
-  status          RiskStatus @default(OPEN)
-  owner           String?
-  mitigation      String?
-  contingency     String?
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  
+  id          String     @id @default(cuid())
+  projectId   String
+  riskNumber  String
+  title       String
+  description String
+  category    String
+  probability Int // 1-5
+  impact      Int // 1-5
+  score       Int // probability * impact
+  status      RiskStatus @default(OPEN)
+  owner       String?
+  mitigation  String?
+  contingency String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
   @@unique([projectId, riskNumber])
 }
 
@@ -128,27 +136,27 @@ enum RiskStatus {
 
 // Change Log
 model ChangeOrder {
-  id              String   @id @default(cuid())
-  projectId       String
-  changeNumber    String
-  title           String
-  description     String
-  status          ChangeStatus @default(SUBMITTED)
-  requestedBy     String
-  approvedBy      String?
-  
-  costImpact      Float    @default(0)
-  timeImpact      Int      @default(0) // days
-  
-  submittedDate   DateTime @default(now())
+  id           String       @id @default(cuid())
+  projectId    String
+  changeNumber String
+  title        String
+  description  String
+  status       ChangeStatus @default(SUBMITTED)
+  requestedBy  String
+  approvedBy   String?
+
+  costImpact Float @default(0)
+  timeImpact Int   @default(0) // days
+
+  submittedDate   DateTime  @default(now())
   approvedDate    DateTime?
   implementedDate DateTime?
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
   @@unique([projectId, changeNumber])
 }
 
@@ -162,19 +170,19 @@ enum ChangeStatus {
 
 // Tasks and Sprints
 model Sprint {
-  id          String   @id @default(cuid())
-  projectId   String
-  name        String
-  goal        String?
-  startDate   DateTime
-  endDate     DateTime
-  status      SprintStatus @default(PLANNED)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  tasks       Task[]
+  id        String       @id @default(cuid())
+  projectId String
+  name      String
+  goal      String?
+  startDate DateTime
+  endDate   DateTime
+  status    SprintStatus @default(PLANNED)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks   Task[]
 }
 
 enum SprintStatus {
@@ -185,34 +193,36 @@ enum SprintStatus {
 }
 
 model Task {
-  id              String   @id @default(cuid())
-  projectId       String
-  sprintId        String?
-  taskNumber      String
-  title           String
-  description     String?
-  status          TaskStatus @default(TODO)
-  priority        Priority @default(MEDIUM)
-  
-  assignedToId    String?
-  createdById     String
-  
-  estimatedHours  Float?
-  actualHours     Float    @default(0)
-  progress        Int      @default(0) // 0-100
-  
-  startDate       DateTime?
-  endDate         DateTime?
-  dependencies    String[] // Array of task IDs
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  sprint          Sprint?  @relation(fields: [sprintId], references: [id])
-  assignedTo      User?    @relation("TaskAssignee", fields: [assignedToId], references: [id])
-  createdBy       User     @relation(fields: [createdById], references: [id])
-  
+  id          String     @id @default(cuid())
+  projectId   String
+  sprintId    String?
+  milestoneId String?
+  taskNumber  String
+  title       String
+  description String?
+  status      TaskStatus @default(TODO)
+  priority    Priority   @default(MEDIUM)
+
+  assignedToId String?
+  createdById  String
+
+  estimatedHours Float?
+  actualHours    Float  @default(0)
+  progress       Int    @default(0) // 0-100
+
+  startDate    DateTime?
+  endDate      DateTime?
+  dependencies String[] // Array of task IDs
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project    Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sprint     Sprint?    @relation(fields: [sprintId], references: [id])
+  milestone  Milestone? @relation("MilestoneTasks", fields: [milestoneId], references: [id])
+  assignedTo User?      @relation("TaskAssignee", fields: [assignedToId], references: [id])
+  createdBy  User       @relation(fields: [createdById], references: [id])
+
   @@unique([projectId, taskNumber])
 }
 
@@ -233,39 +243,41 @@ enum Priority {
 
 // Resource Allocation
 model ResourceAllocation {
-  id          String   @id @default(cuid())
-  projectId   String
-  userId      String
-  resourceType String
+  id             String   @id @default(cuid())
+  projectId      String
+  userId         String
+  resourceId     String?
+  resourceType   String
   allocatedHours Float
-  utilization Float    @default(0) // percentage
-  startDate   DateTime
-  endDate     DateTime
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user        User     @relation(fields: [userId], references: [id])
+  utilization    Float    @default(0) // percentage
+  startDate      DateTime
+  endDate        DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id])
+  resource Resource? @relation("ResourceAllocations", fields: [resourceId], references: [id])
 }
 
 // Cashflow
 model Cashflow {
-  id          String   @id @default(cuid())
+  id          String       @id @default(cuid())
   projectId   String
   date        DateTime
   type        CashflowType
   category    String
   description String
-  
-  forecast    Float
-  actual      Float?
-  variance    Float?   @default(0)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  forecast Float
+  actual   Float?
+  variance Float? @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
 enum CashflowType {
@@ -275,27 +287,27 @@ enum CashflowType {
 
 // Issues
 model Issue {
-  id          String   @id @default(cuid())
+  id          String      @id @default(cuid())
   projectId   String
   issueNumber String
   title       String
   description String
   status      IssueStatus @default(OPEN)
-  priority    Priority @default(MEDIUM)
+  priority    Priority    @default(MEDIUM)
   raisedBy    String
   assignedTo  String?
-  
-  raisedById  String
-  
-  dueDate     DateTime?
+
+  raisedById String
+
+  dueDate      DateTime?
   resolvedDate DateTime?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project      Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   raisedByUser User    @relation(fields: [raisedById], references: [id])
-  
+
   @@unique([projectId, issueNumber])
 }
 
@@ -308,7 +320,7 @@ enum IssueStatus {
 
 // RFI (Request for Information)
 model RFI {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   projectId   String
   rfiNumber   String
   title       String
@@ -316,20 +328,20 @@ model RFI {
   status      RFIStatus @default(OPEN)
   requestedBy String
   respondedBy String?
-  
+
   requestedById String
-  
-  requestDate DateTime @default(now())
-  dueDate     DateTime?
+
+  requestDate  DateTime  @default(now())
+  dueDate      DateTime?
   responseDate DateTime?
-  response    String?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  requestedByUser User @relation(fields: [requestedById], references: [id])
-  
+  response     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project         Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  requestedByUser User    @relation(fields: [requestedById], references: [id])
+
   @@unique([projectId, rfiNumber])
 }
 
@@ -341,24 +353,24 @@ enum RFIStatus {
 
 // Procurement
 model Procurement {
-  id          String   @id @default(cuid())
+  id          String            @id @default(cuid())
   projectId   String
   poNumber    String
   vendor      String
   description String
   status      ProcurementStatus @default(REQUESTED)
-  
-  orderValue  Float
-  paidAmount  Float    @default(0)
-  
-  orderDate   DateTime @default(now())
+
+  orderValue Float
+  paidAmount Float @default(0)
+
+  orderDate    DateTime  @default(now())
   deliveryDate DateTime?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
   @@unique([projectId, poNumber])
 }
 
@@ -373,16 +385,204 @@ enum ProcurementStatus {
 
 // Audit Trail
 model AuditLog {
-  id          String   @id @default(cuid())
-  projectId   String?
-  userId      String
-  action      String
-  entityType  String
-  entityId    String
-  changes     Json?
-  
-  createdAt   DateTime @default(now())
-  
-  project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user        User     @relation(fields: [userId], references: [id])
+  id         String  @id @default(cuid())
+  projectId  String?
+  userId     String
+  action     String
+  entityType String
+  entityId   String
+  changes    Json?
+
+  createdAt DateTime @default(now())
+
+  project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User     @relation(fields: [userId], references: [id])
+}
+
+// Milestones
+model Milestone {
+  id          String          @id @default(cuid())
+  projectId   String
+  name        String
+  description String?
+  dueDate     DateTime
+  status      MilestoneStatus @default(PENDING)
+  progress    Int             @default(0) // 0-100
+  owner       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks   Task[]  @relation("MilestoneTasks")
+}
+
+enum MilestoneStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  DELAYED
+}
+
+// Resources
+model Resource {
+  id           String       @id @default(cuid())
+  name         String
+  type         ResourceType
+  description  String?
+  costPerHour  Float?
+  availability String? // e.g., "Full-time", "Part-time", "On-demand"
+  skills       String[] // Array of skills
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  allocations ResourceAllocation[] @relation("ResourceAllocations")
+}
+
+enum ResourceType {
+  LABOR
+  EQUIPMENT
+  MATERIAL
+  CONTRACTOR
+}
+
+// Budget Lines
+model BudgetLine {
+  id          String @id @default(cuid())
+  projectId   String
+  category    String
+  description String
+  budgeted    Float
+  spent       Float  @default(0)
+  committed   Float  @default(0)
+  variance    Float? @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+// Decisions
+model Decision {
+  id             String         @id @default(cuid())
+  projectId      String
+  decisionNumber String
+  title          String
+  description    String
+  status         DecisionStatus @default(PENDING)
+  priority       Priority       @default(MEDIUM)
+
+  decidedBy   String?
+  decidedDate DateTime?
+  decision    String?
+  rationale   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  actions Action[]
+
+  @@unique([projectId, decisionNumber])
+}
+
+enum DecisionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  DEFERRED
+}
+
+// Actions
+model Action {
+  id           String       @id @default(cuid())
+  projectId    String
+  decisionId   String?
+  actionNumber String
+  title        String
+  description  String
+  status       ActionStatus @default(OPEN)
+  priority     Priority     @default(MEDIUM)
+
+  assignedToId String?
+  assignedTo   User?   @relation(fields: [assignedToId], references: [id])
+
+  dueDate       DateTime?
+  completedDate DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  decision Decision? @relation(fields: [decisionId], references: [id])
+
+  @@unique([projectId, actionNumber])
+}
+
+enum ActionStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  OVERDUE
+}
+
+// Submittals
+model Submittal {
+  id              String          @id @default(cuid())
+  projectId       String
+  submittalNumber String
+  title           String
+  description     String
+  status          SubmittalStatus @default(DRAFT)
+  type            String // e.g., "Shop Drawings", "Product Data", "Samples"
+
+  submittedBy   String?
+  submittedDate DateTime?
+
+  reviewedBy   String?
+  reviewedDate DateTime?
+  reviewStatus String?
+  comments     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  attachments Attachment[]
+
+  @@unique([projectId, submittalNumber])
+}
+
+enum SubmittalStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  APPROVED_WITH_COMMENTS
+  REJECTED
+  RESUBMIT
+}
+
+// Attachments
+model Attachment {
+  id         String @id @default(cuid())
+  projectId  String
+  entityType String // e.g., "Project", "Task", "RFI", "Submittal"
+  entityId   String
+
+  fileName String
+  fileSize Int // in bytes
+  fileType String // MIME type
+  filePath String // Storage path or URL
+
+  uploadedById String
+  uploadedBy   User   @relation(fields: [uploadedById], references: [id])
+
+  createdAt DateTime @default(now())
+
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  submittal Submittal? @relation(fields: [entityId], references: [id])
 }
