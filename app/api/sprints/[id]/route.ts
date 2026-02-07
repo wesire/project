@@ -114,7 +114,7 @@ export async function PUT(
     const validatedData = validateData(updateSprintSchema, body)
     
     // Build update data
-    const updateData: any = {}
+    const updateData: Record<string, unknown> = {}
     if (validatedData.name !== undefined) updateData.name = validatedData.name
     if (validatedData.goal !== undefined) updateData.goal = validatedData.goal
     if (validatedData.startDate !== undefined) updateData.startDate = new Date(validatedData.startDate)
@@ -172,9 +172,9 @@ export async function PUT(
       )
     }
     
-    if (error instanceof ValidationError || (error as any).name === 'ZodError') {
+    if (error instanceof ValidationError || (error as { name?: string }).name === 'ZodError') {
       return NextResponse.json(
-        { error: 'Validation failed', details: (error as any).message },
+        { error: 'Validation failed', details: (error as { message?: string }).message },
         { status: 400 }
       )
     }

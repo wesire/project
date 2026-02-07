@@ -103,7 +103,7 @@ export async function PUT(
     const validatedData = validateData(updateCashflowSchema, body)
     
     // Build update data
-    const updateData: any = {}
+    const updateData: Record<string, unknown> = {}
     if (validatedData.date !== undefined) updateData.date = new Date(validatedData.date)
     if (validatedData.type !== undefined) updateData.type = validatedData.type
     if (validatedData.category !== undefined) updateData.category = validatedData.category
@@ -163,9 +163,9 @@ export async function PUT(
       )
     }
     
-    if (error instanceof ValidationError || (error as any).name === 'ZodError') {
+    if (error instanceof ValidationError || (error as { name?: string }).name === 'ZodError') {
       return NextResponse.json(
-        { error: 'Validation failed', details: (error as any).message },
+        { error: 'Validation failed', details: (error as { message?: string }).message },
         { status: 400 }
       )
     }

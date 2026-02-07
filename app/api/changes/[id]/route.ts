@@ -103,7 +103,7 @@ export async function PUT(
     const validatedData = validateData(updateChangeOrderSchema, body)
     
     // Build update data
-    const updateData: any = {}
+    const updateData: Record<string, unknown> = {}
     if (validatedData.changeNumber !== undefined) updateData.changeNumber = validatedData.changeNumber
     if (validatedData.title !== undefined) updateData.title = validatedData.title
     if (validatedData.description !== undefined) updateData.description = validatedData.description
@@ -158,9 +158,9 @@ export async function PUT(
       )
     }
     
-    if (error instanceof ValidationError || (error as any).name === 'ZodError') {
+    if (error instanceof ValidationError || (error as { name?: string }).name === 'ZodError') {
       return NextResponse.json(
-        { error: 'Validation failed', details: (error as any).message },
+        { error: 'Validation failed', details: (error as { message?: string }).message },
         { status: 400 }
       )
     }

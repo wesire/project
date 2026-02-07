@@ -3,7 +3,6 @@
  */
 
 import { NextRequest } from 'next/server'
-import { z } from 'zod'
 
 /**
  * Pagination parameters
@@ -122,7 +121,7 @@ export function getSearchParams(
 export function buildSearchWhere(
   search: string | null,
   searchFields: string[]
-): any {
+): Record<string, unknown> {
   if (!search || searchFields.length === 0) {
     return {}
   }
@@ -145,9 +144,9 @@ export function buildSearchWhere(
 export function getFilterParams(
   request: NextRequest,
   allowedFields: string[]
-): Record<string, any> {
+): Record<string, string | number | boolean | Record<string, string | number>> {
   const { searchParams } = new URL(request.url)
-  const filters: Record<string, any> = {}
+  const filters: Record<string, string | number | boolean | Record<string, string | number>> = {}
   
   // Reserved query parameters that are not filters
   const reservedParams = ['page', 'perPage', 'sortBy', 'sortOrder', 'search', 'searchFields']
@@ -162,10 +161,12 @@ export function getFilterParams(
     if (rangeMatch) {
       const [, field, operator] = rangeMatch
       if (allowedFields.includes(field)) {
-        if (!filters[field]) {
+        // Ensure field is an object for range operators
+        const fieldFilter = filters[field]
+        if (typeof fieldFilter !== 'object' || fieldFilter === null || Array.isArray(fieldFilter)) {
           filters[field] = {}
         }
-        filters[field][operator] = isNaN(Number(value)) ? value : Number(value)
+        (filters[field] as Record<string, string | number>)[operator] = isNaN(Number(value)) ? value : Number(value)
       }
       return
     }
@@ -224,7 +225,7 @@ export function createPaginatedResponse<T>(
 /**
  * Combine where clauses
  */
-export function combineWhereClause(...clauses: any[]): any {
+export function combineWhereClause(...clauses: Record<string, unknown>[]): Record<string, unknown> {
   const nonEmptyClauses = clauses.filter(c => c && Object.keys(c).length > 0)
   
   if (nonEmptyClauses.length === 0) {

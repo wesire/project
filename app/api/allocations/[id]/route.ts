@@ -117,7 +117,7 @@ export async function PUT(
     const validatedData = validateData(updateResourceAllocationSchema, body)
     
     // Build update data
-    const updateData: any = {}
+    const updateData: Record<string, unknown> = {}
     if (validatedData.userId !== undefined) updateData.userId = validatedData.userId
     if (validatedData.resourceId !== undefined) updateData.resourceId = validatedData.resourceId
     if (validatedData.resourceType !== undefined) updateData.resourceType = validatedData.resourceType
@@ -187,9 +187,9 @@ export async function PUT(
       )
     }
     
-    if (error instanceof ValidationError || (error as any).name === 'ZodError') {
+    if (error instanceof ValidationError || (error as { name?: string }).name === 'ZodError') {
       return NextResponse.json(
-        { error: 'Validation failed', details: (error as any).message },
+        { error: 'Validation failed', details: (error as { message?: string }).message },
         { status: 400 }
       )
     }

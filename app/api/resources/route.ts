@@ -16,7 +16,7 @@ import { AuthenticationError, ValidationError } from '@/lib/errors'
 export async function GET(request: NextRequest) {
   try {
     // Authenticate user
-    const user = await authenticateRequest(request)
+    const _user = await authenticateRequest(request)
     
     // Get pagination params
     const { skip, take, page, perPage } = getPaginationParams(request)
@@ -127,9 +127,9 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    if (error instanceof ValidationError || (error as any).name === 'ZodError') {
+    if (error instanceof ValidationError || (error as { name?: string }).name === 'ZodError') {
       return NextResponse.json(
-        { error: 'Validation failed', details: (error as any).message },
+        { error: 'Validation failed', details: (error as { message?: string }).message },
         { status: 400 }
       )
     }

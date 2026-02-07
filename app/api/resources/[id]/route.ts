@@ -15,7 +15,7 @@ export async function GET(
   { params }: RouteParams
 ) {
   try {
-    const user = await requirePermission(request, 'resource:read')
+    const _user = await requirePermission(request, 'resource:read')
     
     const resource = await prisma.resource.findUnique({
       where: { id: params.id },
@@ -96,7 +96,7 @@ export async function PUT(
     const validatedData = validateData(updateResourceSchema, body)
     
     // Build update data
-    const updateData: any = {}
+    const updateData: Record<string, unknown> = {}
     if (validatedData.name !== undefined) updateData.name = validatedData.name
     if (validatedData.type !== undefined) updateData.type = validatedData.type
     if (validatedData.description !== undefined) updateData.description = validatedData.description
@@ -148,9 +148,9 @@ export async function PUT(
       )
     }
     
-    if (error instanceof ValidationError || (error as any).name === 'ZodError') {
+    if (error instanceof ValidationError || (error as { name?: string }).name === 'ZodError') {
       return NextResponse.json(
-        { error: 'Validation failed', details: (error as any).message },
+        { error: 'Validation failed', details: (error as { message?: string }).message },
         { status: 400 }
       )
     }

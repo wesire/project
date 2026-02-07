@@ -130,8 +130,8 @@ export async function getAccessibleProjectIds(
 export async function filterByProjectAccess(
   userId: string,
   userRole: UserRole,
-  baseWhere: any = {}
-): Promise<any> {
+  baseWhere: Record<string, unknown> = {}
+): Promise<Record<string, unknown>> {
   const accessibleProjectIds = await getAccessibleProjectIds(userId, userRole)
   
   // If null, user has access to all projects
@@ -157,8 +157,8 @@ export async function filterByProjectAccess(
 export async function filterByResourceProjectAccess(
   userId: string,
   userRole: UserRole,
-  baseWhere: any = {}
-): Promise<any> {
+  baseWhere: Record<string, unknown> = {}
+): Promise<Record<string, unknown>> {
   const accessibleProjectIds = await getAccessibleProjectIds(userId, userRole)
   
   // If null, user has access to all projects
