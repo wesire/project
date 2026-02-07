@@ -2,6 +2,16 @@
 
 A comprehensive full-stack construction project management and control application built with modern web technologies.
 
+## 🔒 Security Status
+
+- ✅ **jsPDF**: Updated to v4.1.0 (all vulnerabilities patched)
+- ⚠️ **xlsx**: v0.18.5 (known issues - see [SECURITY.md](SECURITY.md) for mitigation)
+- ✅ **Authentication**: Secure JWT with bcryptjs
+- ✅ **Database**: Parameterized queries via Prisma
+- ✅ **Audit Trail**: Complete change tracking
+
+**See [SECURITY.md](SECURITY.md) for detailed security information and production hardening recommendations.**
+
 ## 🏗️ Features
 
 ### Core Modules
