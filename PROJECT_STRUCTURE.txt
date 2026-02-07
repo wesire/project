@@ -1,0 +1,62 @@
+.
+├── app
+│   ├── api
+│   │   ├── auth
+│   │   ├── projects
+│   │   └── risks
+│   ├── cashflow
+│   │   └── page.tsx
+│   ├── dashboard
+│   │   └── page.tsx
+│   ├── projects
+│   │   └── page.tsx
+│   ├── risks
+│   │   └── page.tsx
+│   ├── tasks
+│   │   └── page.tsx
+│   ├── globals.css
+│   ├── layout.tsx
+│   └── page.tsx
+├── features
+├── lib
+│   ├── errors
+│   │   ├── custom-errors.ts
+│   │   ├── error-handler.ts
+│   │   └── index.ts
+│   ├── export
+│   │   ├── pdf.ts
+│   │   ├── pptx.ts
+│   │   └── xlsx.ts
+│   ├── types
+│   │   └── index.ts
+│   ├── auth.ts
+│   ├── middleware.ts
+│   ├── prisma.ts
+│   ├── rbac.ts
+│   ├── utils.ts
+│   └── validation.ts
+├── prisma
+│   ├── schema.prisma
+│   └── seed.ts
+├── scripts
+│   └── verify-setup.sh
+├── API_REFERENCE.md
+├── FEATURE_STRUCTURE.md
+├── IMPLEMENTATION_COMPLETE.md
+├── IMPLEMENTATION_SUMMARY.md
+├── PROJECT_STRUCTURE.txt
+├── QUICKSTART.md
+├── README.md
+├── README_OLD.md
+├── SECURITY.md
+├── SECURITY_CERTIFICATE.md
+├── SETUP_GUIDE.md
+├── next-env.d.ts
+├── next.config.js
+├── package-lock.json
+├── package.json
+├── postcss.config.js
+├── tailwind.config.ts
+└── tsconfig.json
+
+18 directories, 42 files

@@ -1,29 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyPassword, generateToken } from '@/lib/auth'
+import { handleApiError, AuthenticationError, ValidationError } from '@/lib/errors'
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json()
+    const body = await request.json()
+    const { email, password } = body
+
+    // Validate required fields
+    if (!email || !password) {
+      throw new ValidationError('Email and password are required')
+    }
 
     const user = await prisma.user.findUnique({
       where: { email },
     })
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
-      )
+      throw new AuthenticationError('Invalid email or password')
     }
 
     const isValidPassword = await verifyPassword(password, user.passwordHash)
 
     if (!isValidPassword) {
-      return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
-      )
+      throw new AuthenticationError('Invalid email or password')
     }
 
     const token = generateToken({
@@ -33,19 +34,18 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json({
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-      },
+      success: true,
+      data: {
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+        },
+      }
     })
   } catch (error) {
-    console.error('Login error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error)
   }
 }

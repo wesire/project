@@ -1,10 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { hashPassword, generateToken } from '@/lib/auth'
+import { handleApiError } from '@/lib/errors'
+import { ConflictError, ValidationError } from '@/lib/errors'
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, name, password, role } = await request.json()
+    const body = await request.json()
+    const { email, name, password, role } = body
+
+    // Validate required fields
+    if (!email || !name || !password) {
+      throw new ValidationError('Email, name, and password are required')
+    }
+
+    // Basic email validation
+    if (!email.includes('@')) {
+      throw new ValidationError('Invalid email format')
+    }
+
+    // Password strength validation
+    if (password.length < 8) {
+      throw new ValidationError('Password must be at least 8 characters long')
+    }
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -12,10 +30,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (existingUser) {
-      return NextResponse.json(
-        { error: 'User already exists' },
-        { status: 400 }
-      )
+      throw new ConflictError('User with this email already exists')
     }
 
     // Hash password
@@ -27,7 +42,7 @@ export async function POST(request: NextRequest) {
         email,
         name,
         passwordHash,
-        role: role || 'USER',
+        role: role || 'VIEWER', // Default to VIEWER role
       },
     })
 
@@ -39,19 +54,18 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json({
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-      },
+      success: true,
+      data: {
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+        },
+      }
     }, { status: 201 })
   } catch (error) {
-    console.error('Registration error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error)
   }
 }
