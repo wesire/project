@@ -36,7 +36,7 @@ export interface AuthResponse {
 }
 
 // API Response Types
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean
   data?: T
   error?: ApiError
@@ -46,7 +46,7 @@ export interface ApiResponse<T = any> {
 export interface ApiError {
   code: string
   message: string
-  details?: any
+  details?: Record<string, unknown>
 }
 
 export interface PaginatedResponse<T> {

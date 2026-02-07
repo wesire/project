@@ -23,7 +23,7 @@ export function formatErrorResponse(error: unknown): ApiResponse {
 
   // Handle Prisma errors
   if (error && typeof error === 'object' && 'code' in error) {
-    const prismaError = error as any
+    const prismaError = error as { code: string; meta?: Record<string, unknown> }
     if (prismaError.code === 'P2002') {
       return {
         success: false,
@@ -85,7 +85,7 @@ export function handleApiError(error: unknown): NextResponse {
 /**
  * Log error for monitoring
  */
-export function logError(error: unknown, context?: Record<string, any>): void {
+export function logError(error: unknown, context?: Record<string, unknown>): void {
   const timestamp = new Date().toISOString()
   const errorInfo = {
     timestamp,

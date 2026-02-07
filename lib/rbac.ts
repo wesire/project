@@ -2,7 +2,7 @@
  * RBAC (Role-Based Access Control) utilities
  */
 
-import { UserRole } from '../types'
+import { UserRole } from './types'
 
 /**
  * Role hierarchy (higher roles include permissions of lower roles)

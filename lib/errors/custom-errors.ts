@@ -7,7 +7,7 @@ export class AppError extends Error {
     public code: string,
     message: string,
     public statusCode: number = 500,
-    public details?: any
+    public details?: Record<string, unknown>
   ) {
     super(message)
     this.name = 'AppError'
@@ -16,7 +16,7 @@ export class AppError extends Error {
 }
 
 export class ValidationError extends AppError {
-  constructor(message: string, details?: any) {
+  constructor(message: string, details?: Record<string, unknown>) {
     super('VALIDATION_ERROR', message, 400, details)
     this.name = 'ValidationError'
   }
@@ -51,7 +51,7 @@ export class ConflictError extends AppError {
 }
 
 export class DatabaseError extends AppError {
-  constructor(message: string, details?: any) {
+  constructor(message: string, details?: Record<string, unknown>) {
     super('DATABASE_ERROR', message, 500, details)
     this.name = 'DatabaseError'
   }
