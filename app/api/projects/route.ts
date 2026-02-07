@@ -161,9 +161,9 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    if (error instanceof ValidationError || error.name === 'ZodError') {
+    if (error instanceof ValidationError || (error as any).name === 'ZodError') {
       return NextResponse.json(
-        { error: 'Validation failed', details: error.message },
+        { error: 'Validation failed', details: (error as any).message },
         { status: 400 }
       )
     }

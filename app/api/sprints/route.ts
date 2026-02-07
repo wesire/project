@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { authenticateRequest, requirePermission } from '@/lib/middleware'
-import { createRiskSchema, validateData } from '@/lib/validation'
+import { createSprintSchema, validateData } from '@/lib/validation'
 import {
   getPaginationParams,
   getSortParams,
@@ -25,18 +25,17 @@ export async function GET(request: NextRequest) {
     
     // Get sorting params
     const allowedSortFields = [
-      'riskNumber', 'title', 'category', 'probability', 
-      'impact', 'score', 'status', 'createdAt', 'updatedAt'
+      'name', 'status', 'startDate', 'endDate', 'createdAt', 'updatedAt'
     ]
-    const { orderBy } = getSortParams(request, allowedSortFields, { score: 'desc' })
+    const { orderBy } = getSortParams(request, allowedSortFields, { startDate: 'desc' })
     
     // Get search params
-    const allowedSearchFields = ['riskNumber', 'title', 'description', 'category', 'owner', 'mitigation']
+    const allowedSearchFields = ['name', 'goal']
     const { search, searchFields } = getSearchParams(request, allowedSearchFields)
     const searchWhere = buildSearchWhere(search, searchFields)
     
     // Get filter params
-    const allowedFilterFields = ['projectId', 'status', 'category', 'owner']
+    const allowedFilterFields = ['projectId', 'status']
     const filterWhere = getFilterParams(request, allowedFilterFields)
     
     // Combine where clauses and apply project access
@@ -44,10 +43,10 @@ export async function GET(request: NextRequest) {
     const where = await filterByResourceProjectAccess(user.userId, user.role as UserRole, baseWhere)
     
     // Get total count
-    const total = await prisma.risk.count({ where })
+    const total = await prisma.sprint.count({ where })
     
-    // Get risks
-    const risks = await prisma.risk.findMany({
+    // Get sprints
+    const sprints = await prisma.sprint.findMany({
       where,
       skip,
       take,
@@ -60,12 +59,17 @@ export async function GET(request: NextRequest) {
             projectNumber: true,
           },
         },
+        _count: {
+          select: {
+            tasks: true,
+          },
+        },
       },
     })
 
-    return NextResponse.json(createPaginatedResponse(risks, total, page, perPage))
+    return NextResponse.json(createPaginatedResponse(sprints, total, page, perPage))
   } catch (error) {
-    console.error('Error fetching risks:', error)
+    console.error('Error fetching sprints:', error)
     
     if (error instanceof AuthenticationError) {
       return NextResponse.json(
@@ -83,38 +87,30 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Require risk:create permission
-    const user = await requirePermission(request, 'risk:create')
+    // Require sprint:create permission
+    const user = await requirePermission(request, 'sprint:create')
     
     const body = await request.json()
     
     // Validate request body
-    const validatedData = validateData(createRiskSchema, body)
+    const validatedData = validateData(createSprintSchema, body)
     
     // Check project access
     await requireProjectPermission(
       user.userId,
       user.role as UserRole,
       validatedData.projectId,
-      'risk:create'
+      'sprint:create'
     )
-    
-    const score = validatedData.probability * validatedData.impact
 
-    const risk = await prisma.risk.create({
+    const sprint = await prisma.sprint.create({
       data: {
         projectId: validatedData.projectId,
-        riskNumber: validatedData.riskNumber,
-        title: validatedData.title,
-        description: validatedData.description,
-        category: validatedData.category,
-        probability: validatedData.probability,
-        impact: validatedData.impact,
-        score: score,
-        status: 'OPEN',
-        owner: validatedData.owner,
-        mitigation: validatedData.mitigation,
-        contingency: validatedData.contingency,
+        name: validatedData.name,
+        goal: validatedData.goal,
+        startDate: new Date(validatedData.startDate),
+        endDate: new Date(validatedData.endDate),
+        status: 'PLANNED',
       },
       include: {
         project: {
@@ -124,26 +120,31 @@ export async function POST(request: NextRequest) {
             projectNumber: true,
           },
         },
+        _count: {
+          select: {
+            tasks: true,
+          },
+        },
       },
     })
     
     // Create audit log
     await prisma.auditLog.create({
       data: {
-        projectId: risk.projectId,
+        projectId: sprint.projectId,
         userId: user.userId,
         action: 'CREATE',
-        entityType: 'Risk',
-        entityId: risk.id,
+        entityType: 'Sprint',
+        entityId: sprint.id,
         changes: {
-          created: risk,
+          created: sprint,
         },
       },
     })
 
-    return NextResponse.json(risk, { status: 201 })
+    return NextResponse.json(sprint, { status: 201 })
   } catch (error) {
-    console.error('Error creating risk:', error)
+    console.error('Error creating sprint:', error)
     
     if (error instanceof AuthenticationError) {
       return NextResponse.json(

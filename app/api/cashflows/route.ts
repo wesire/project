@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { authenticateRequest, requirePermission } from '@/lib/middleware'
-import { createRiskSchema, validateData } from '@/lib/validation'
+import { createCashflowSchema, validateData } from '@/lib/validation'
 import {
   getPaginationParams,
   getSortParams,
@@ -25,18 +25,18 @@ export async function GET(request: NextRequest) {
     
     // Get sorting params
     const allowedSortFields = [
-      'riskNumber', 'title', 'category', 'probability', 
-      'impact', 'score', 'status', 'createdAt', 'updatedAt'
+      'date', 'type', 'category', 'forecast', 'actual', 
+      'variance', 'createdAt', 'updatedAt'
     ]
-    const { orderBy } = getSortParams(request, allowedSortFields, { score: 'desc' })
+    const { orderBy } = getSortParams(request, allowedSortFields, { date: 'desc' })
     
     // Get search params
-    const allowedSearchFields = ['riskNumber', 'title', 'description', 'category', 'owner', 'mitigation']
+    const allowedSearchFields = ['category', 'description']
     const { search, searchFields } = getSearchParams(request, allowedSearchFields)
     const searchWhere = buildSearchWhere(search, searchFields)
     
     // Get filter params
-    const allowedFilterFields = ['projectId', 'status', 'category', 'owner']
+    const allowedFilterFields = ['projectId', 'type', 'category']
     const filterWhere = getFilterParams(request, allowedFilterFields)
     
     // Combine where clauses and apply project access
@@ -44,10 +44,10 @@ export async function GET(request: NextRequest) {
     const where = await filterByResourceProjectAccess(user.userId, user.role as UserRole, baseWhere)
     
     // Get total count
-    const total = await prisma.risk.count({ where })
+    const total = await prisma.cashflow.count({ where })
     
-    // Get risks
-    const risks = await prisma.risk.findMany({
+    // Get cashflows
+    const cashflows = await prisma.cashflow.findMany({
       where,
       skip,
       take,
@@ -63,9 +63,9 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    return NextResponse.json(createPaginatedResponse(risks, total, page, perPage))
+    return NextResponse.json(createPaginatedResponse(cashflows, total, page, perPage))
   } catch (error) {
-    console.error('Error fetching risks:', error)
+    console.error('Error fetching cashflows:', error)
     
     if (error instanceof AuthenticationError) {
       return NextResponse.json(
@@ -83,38 +83,37 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Require risk:create permission
-    const user = await requirePermission(request, 'risk:create')
+    // Require cashflow:create permission
+    const user = await requirePermission(request, 'cashflow:create')
     
     const body = await request.json()
     
     // Validate request body
-    const validatedData = validateData(createRiskSchema, body)
+    const validatedData = validateData(createCashflowSchema, body)
     
     // Check project access
     await requireProjectPermission(
       user.userId,
       user.role as UserRole,
       validatedData.projectId,
-      'risk:create'
+      'cashflow:create'
     )
-    
-    const score = validatedData.probability * validatedData.impact
 
-    const risk = await prisma.risk.create({
+    // Calculate variance if actual is provided
+    const variance = validatedData.actual !== undefined 
+      ? validatedData.actual - validatedData.forecast 
+      : 0
+
+    const cashflow = await prisma.cashflow.create({
       data: {
         projectId: validatedData.projectId,
-        riskNumber: validatedData.riskNumber,
-        title: validatedData.title,
-        description: validatedData.description,
+        date: new Date(validatedData.date),
+        type: validatedData.type,
         category: validatedData.category,
-        probability: validatedData.probability,
-        impact: validatedData.impact,
-        score: score,
-        status: 'OPEN',
-        owner: validatedData.owner,
-        mitigation: validatedData.mitigation,
-        contingency: validatedData.contingency,
+        description: validatedData.description,
+        forecast: validatedData.forecast,
+        actual: validatedData.actual,
+        variance: variance,
       },
       include: {
         project: {
@@ -130,20 +129,20 @@ export async function POST(request: NextRequest) {
     // Create audit log
     await prisma.auditLog.create({
       data: {
-        projectId: risk.projectId,
+        projectId: cashflow.projectId,
         userId: user.userId,
         action: 'CREATE',
-        entityType: 'Risk',
-        entityId: risk.id,
+        entityType: 'Cashflow',
+        entityId: cashflow.id,
         changes: {
-          created: risk,
+          created: cashflow,
         },
       },
     })
 
-    return NextResponse.json(risk, { status: 201 })
+    return NextResponse.json(cashflow, { status: 201 })
   } catch (error) {
-    console.error('Error creating risk:', error)
+    console.error('Error creating cashflow:', error)
     
     if (error instanceof AuthenticationError) {
       return NextResponse.json(

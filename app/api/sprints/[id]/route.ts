@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requirePermission } from '@/lib/middleware'
-import { updateProjectSchema, validateData } from '@/lib/validation'
-import { requireProjectAccess } from '@/lib/project-permissions'
+import { updateSprintSchema, validateData } from '@/lib/validation'
+import { requireProjectPermission } from '@/lib/project-permissions'
 import { AuthenticationError, AuthorizationError, ValidationError } from '@/lib/errors'
 import { UserRole } from '@/lib/types'
 
@@ -17,57 +17,50 @@ export async function GET(
   { params }: RouteParams
 ) {
   try {
-    const user = await requirePermission(request, 'project:read')
+    const user = await requirePermission(request, 'sprint:read')
     
-    // Check project access
-    await requireProjectAccess(user.userId, user.role as UserRole, params.id, 'view project details')
-    
-    const project = await prisma.project.findUnique({
+    const sprint = await prisma.sprint.findUnique({
       where: { id: params.id },
       include: {
-        createdBy: {
+        project: {
           select: {
             id: true,
             name: true,
-            email: true,
+            projectNumber: true,
           },
         },
-        members: {
+        tasks: {
           include: {
-            user: {
+            assignedTo: {
               select: {
                 id: true,
                 name: true,
                 email: true,
-                role: true,
               },
             },
-          },
-        },
-        _count: {
-          select: {
-            risks: true,
-            changes: true,
-            tasks: true,
-            sprints: true,
-            resources: true,
-            cashflows: true,
-            issues: true,
           },
         },
       },
     })
     
-    if (!project) {
+    if (!sprint) {
       return NextResponse.json(
-        { error: 'Project not found' },
+        { error: 'Sprint not found' },
         { status: 404 }
       )
     }
     
-    return NextResponse.json(project)
+    // Check project access
+    await requireProjectPermission(
+      user.userId,
+      user.role as UserRole,
+      sprint.projectId,
+      'sprint:read'
+    )
+    
+    return NextResponse.json(sprint)
   } catch (error) {
-    console.error('Error fetching project:', error)
+    console.error('Error fetching sprint:', error)
     
     if (error instanceof AuthenticationError) {
       return NextResponse.json(
@@ -95,48 +88,52 @@ export async function PUT(
   { params }: RouteParams
 ) {
   try {
-    const user = await requirePermission(request, 'project:update')
+    const user = await requirePermission(request, 'sprint:update')
     
-    // Check project access
-    await requireProjectAccess(user.userId, user.role as UserRole, params.id, 'update project')
-    
-    // Check if project exists
-    const existingProject = await prisma.project.findUnique({
+    // Check if sprint exists
+    const existingSprint = await prisma.sprint.findUnique({
       where: { id: params.id }
     })
     
-    if (!existingProject) {
+    if (!existingSprint) {
       return NextResponse.json(
-        { error: 'Project not found' },
+        { error: 'Sprint not found' },
         { status: 404 }
       )
     }
     
+    // Check project access
+    await requireProjectPermission(
+      user.userId,
+      user.role as UserRole,
+      existingSprint.projectId,
+      'sprint:update'
+    )
+    
     const body = await request.json()
-    const validatedData = validateData(updateProjectSchema, body)
+    const validatedData = validateData(updateSprintSchema, body)
     
     // Build update data
     const updateData: any = {}
-    if (validatedData.projectNumber !== undefined) updateData.projectNumber = validatedData.projectNumber
     if (validatedData.name !== undefined) updateData.name = validatedData.name
-    if (validatedData.description !== undefined) updateData.description = validatedData.description
-    if (validatedData.status !== undefined) updateData.status = validatedData.status
+    if (validatedData.goal !== undefined) updateData.goal = validatedData.goal
     if (validatedData.startDate !== undefined) updateData.startDate = new Date(validatedData.startDate)
     if (validatedData.endDate !== undefined) updateData.endDate = new Date(validatedData.endDate)
-    if (validatedData.budget !== undefined) updateData.budget = validatedData.budget
-    if (validatedData.currency !== undefined) updateData.currency = validatedData.currency
-    if (validatedData.location !== undefined) updateData.location = validatedData.location
-    if (validatedData.client !== undefined) updateData.client = validatedData.client
     
-    const project = await prisma.project.update({
+    const sprint = await prisma.sprint.update({
       where: { id: params.id },
       data: updateData,
       include: {
-        createdBy: {
+        project: {
           select: {
             id: true,
             name: true,
-            email: true,
+            projectNumber: true,
+          },
+        },
+        _count: {
+          select: {
+            tasks: true,
           },
         },
       },
@@ -145,21 +142,21 @@ export async function PUT(
     // Create audit log
     await prisma.auditLog.create({
       data: {
-        projectId: project.id,
+        projectId: sprint.projectId,
         userId: user.userId,
         action: 'UPDATE',
-        entityType: 'Project',
-        entityId: project.id,
+        entityType: 'Sprint',
+        entityId: sprint.id,
         changes: {
-          before: existingProject,
-          after: project,
+          before: existingSprint,
+          after: sprint,
         },
       },
     })
     
-    return NextResponse.json(project)
+    return NextResponse.json(sprint)
   } catch (error) {
-    console.error('Error updating project:', error)
+    console.error('Error updating sprint:', error)
     
     if (error instanceof AuthenticationError) {
       return NextResponse.json(
@@ -194,44 +191,50 @@ export async function DELETE(
   { params }: RouteParams
 ) {
   try {
-    const user = await requirePermission(request, 'project:delete')
+    const user = await requirePermission(request, 'sprint:delete')
     
-    // Check project access
-    await requireProjectAccess(user.userId, user.role as UserRole, params.id, 'delete project')
-    
-    // Check if project exists
-    const existingProject = await prisma.project.findUnique({
+    // Check if sprint exists
+    const existingSprint = await prisma.sprint.findUnique({
       where: { id: params.id }
     })
     
-    if (!existingProject) {
+    if (!existingSprint) {
       return NextResponse.json(
-        { error: 'Project not found' },
+        { error: 'Sprint not found' },
         { status: 404 }
       )
     }
     
-    // Delete project (cascade will handle related records)
-    await prisma.project.delete({
+    // Check project access
+    await requireProjectPermission(
+      user.userId,
+      user.role as UserRole,
+      existingSprint.projectId,
+      'sprint:delete'
+    )
+    
+    // Delete sprint
+    await prisma.sprint.delete({
       where: { id: params.id }
     })
     
-    // Create audit log (not tied to project since it's deleted)
+    // Create audit log
     await prisma.auditLog.create({
       data: {
+        projectId: existingSprint.projectId,
         userId: user.userId,
         action: 'DELETE',
-        entityType: 'Project',
+        entityType: 'Sprint',
         entityId: params.id,
         changes: {
-          deleted: existingProject,
+          deleted: existingSprint,
         },
       },
     })
     
-    return NextResponse.json({ message: 'Project deleted successfully' })
+    return NextResponse.json({ message: 'Sprint deleted successfully' })
   } catch (error) {
-    console.error('Error deleting project:', error)
+    console.error('Error deleting sprint:', error)
     
     if (error instanceof AuthenticationError) {
       return NextResponse.json(

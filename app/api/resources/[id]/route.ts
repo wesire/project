@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requirePermission } from '@/lib/middleware'
-import { updateProjectSchema, validateData } from '@/lib/validation'
-import { requireProjectAccess } from '@/lib/project-permissions'
+import { updateResourceSchema, validateData } from '@/lib/validation'
 import { AuthenticationError, AuthorizationError, ValidationError } from '@/lib/errors'
-import { UserRole } from '@/lib/types'
 
 interface RouteParams {
   params: {
@@ -17,57 +15,42 @@ export async function GET(
   { params }: RouteParams
 ) {
   try {
-    const user = await requirePermission(request, 'project:read')
+    const user = await requirePermission(request, 'resource:read')
     
-    // Check project access
-    await requireProjectAccess(user.userId, user.role as UserRole, params.id, 'view project details')
-    
-    const project = await prisma.project.findUnique({
+    const resource = await prisma.resource.findUnique({
       where: { id: params.id },
       include: {
-        createdBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        members: {
+        allocations: {
           include: {
+            project: {
+              select: {
+                id: true,
+                name: true,
+                projectNumber: true,
+              },
+            },
             user: {
               select: {
                 id: true,
                 name: true,
                 email: true,
-                role: true,
               },
             },
-          },
-        },
-        _count: {
-          select: {
-            risks: true,
-            changes: true,
-            tasks: true,
-            sprints: true,
-            resources: true,
-            cashflows: true,
-            issues: true,
           },
         },
       },
     })
     
-    if (!project) {
+    if (!resource) {
       return NextResponse.json(
-        { error: 'Project not found' },
+        { error: 'Resource not found' },
         { status: 404 }
       )
     }
     
-    return NextResponse.json(project)
+    return NextResponse.json(resource)
   } catch (error) {
-    console.error('Error fetching project:', error)
+    console.error('Error fetching resource:', error)
     
     if (error instanceof AuthenticationError) {
       return NextResponse.json(
@@ -95,71 +78,61 @@ export async function PUT(
   { params }: RouteParams
 ) {
   try {
-    const user = await requirePermission(request, 'project:update')
+    const user = await requirePermission(request, 'resource:update')
     
-    // Check project access
-    await requireProjectAccess(user.userId, user.role as UserRole, params.id, 'update project')
-    
-    // Check if project exists
-    const existingProject = await prisma.project.findUnique({
+    // Check if resource exists
+    const existingResource = await prisma.resource.findUnique({
       where: { id: params.id }
     })
     
-    if (!existingProject) {
+    if (!existingResource) {
       return NextResponse.json(
-        { error: 'Project not found' },
+        { error: 'Resource not found' },
         { status: 404 }
       )
     }
     
     const body = await request.json()
-    const validatedData = validateData(updateProjectSchema, body)
+    const validatedData = validateData(updateResourceSchema, body)
     
     // Build update data
     const updateData: any = {}
-    if (validatedData.projectNumber !== undefined) updateData.projectNumber = validatedData.projectNumber
     if (validatedData.name !== undefined) updateData.name = validatedData.name
+    if (validatedData.type !== undefined) updateData.type = validatedData.type
     if (validatedData.description !== undefined) updateData.description = validatedData.description
-    if (validatedData.status !== undefined) updateData.status = validatedData.status
-    if (validatedData.startDate !== undefined) updateData.startDate = new Date(validatedData.startDate)
-    if (validatedData.endDate !== undefined) updateData.endDate = new Date(validatedData.endDate)
-    if (validatedData.budget !== undefined) updateData.budget = validatedData.budget
-    if (validatedData.currency !== undefined) updateData.currency = validatedData.currency
-    if (validatedData.location !== undefined) updateData.location = validatedData.location
-    if (validatedData.client !== undefined) updateData.client = validatedData.client
+    if (validatedData.costPerHour !== undefined) updateData.costPerHour = validatedData.costPerHour
+    if (validatedData.availability !== undefined) updateData.availability = validatedData.availability
+    if (validatedData.skills !== undefined) updateData.skills = validatedData.skills
     
-    const project = await prisma.project.update({
+    const resource = await prisma.resource.update({
       where: { id: params.id },
       data: updateData,
       include: {
-        createdBy: {
+        _count: {
           select: {
-            id: true,
-            name: true,
-            email: true,
+            allocations: true,
           },
         },
       },
     })
     
-    // Create audit log
+    // Create audit log (no projectId for resources)
     await prisma.auditLog.create({
       data: {
-        projectId: project.id,
         userId: user.userId,
         action: 'UPDATE',
-        entityType: 'Project',
-        entityId: project.id,
+        entityType: 'Resource',
+        entityId: resource.id,
         changes: {
-          before: existingProject,
-          after: project,
+          before: existingResource,
+          after: resource,
         },
       },
     })
     
-    return NextResponse.json(project)
+    return NextResponse.json(resource)
   } catch (error) {
-    console.error('Error updating project:', error)
+    console.error('Error updating resource:', error)
     
     if (error instanceof AuthenticationError) {
       return NextResponse.json(
@@ -194,44 +167,41 @@ export async function DELETE(
   { params }: RouteParams
 ) {
   try {
-    const user = await requirePermission(request, 'project:delete')
+    const user = await requirePermission(request, 'resource:delete')
     
-    // Check project access
-    await requireProjectAccess(user.userId, user.role as UserRole, params.id, 'delete project')
-    
-    // Check if project exists
-    const existingProject = await prisma.project.findUnique({
+    // Check if resource exists
+    const existingResource = await prisma.resource.findUnique({
       where: { id: params.id }
     })
     
-    if (!existingProject) {
+    if (!existingResource) {
       return NextResponse.json(
-        { error: 'Project not found' },
+        { error: 'Resource not found' },
         { status: 404 }
       )
     }
     
-    // Delete project (cascade will handle related records)
-    await prisma.project.delete({
+    // Delete resource
+    await prisma.resource.delete({
       where: { id: params.id }
     })
     
-    // Create audit log (not tied to project since it's deleted)
+    // Create audit log (no projectId for resources)
     await prisma.auditLog.create({
       data: {
         userId: user.userId,
         action: 'DELETE',
-        entityType: 'Project',
+        entityType: 'Resource',
         entityId: params.id,
         changes: {
-          deleted: existingProject,
+          deleted: existingResource,
         },
       },
     })
     
-    return NextResponse.json({ message: 'Project deleted successfully' })
+    return NextResponse.json({ message: 'Resource deleted successfully' })
   } catch (error) {
-    console.error('Error deleting project:', error)
+    console.error('Error deleting resource:', error)
     
     if (error instanceof AuthenticationError) {
       return NextResponse.json(
