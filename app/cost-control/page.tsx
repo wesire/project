@@ -15,6 +15,7 @@ import {
   Area,
   AreaChart,
 } from 'recharts';
+import { apiFetch } from '@/lib/api-client';
 
 interface Project {
   id: string;
@@ -101,7 +102,7 @@ export default function CostControlPage() {
 
   const fetchProjects = async () => {
     try {
-      const response = await fetch('/api/projects');
+      const response = await apiFetch('/api/projects');
       const data = await response.json();
       setProjects(data);
       if (data.length > 0) {
@@ -115,7 +116,7 @@ export default function CostControlPage() {
   const fetchAnalytics = async () => {
     setLoading(true);
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `/api/cost-control/analytics?projectId=${selectedProject}&period=${period}`
       );
       const data = await response.json();
