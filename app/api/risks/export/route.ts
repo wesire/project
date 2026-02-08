@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const projectId = searchParams.get('projectId')
     
     // Build where clause
-    let where: any = {}
+    let where: Record<string, unknown> = {}
     if (projectId) {
       where.projectId = projectId
     }
