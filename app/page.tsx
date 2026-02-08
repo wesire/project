@@ -12,6 +12,11 @@ export default function Home() {
 
       <main className="flex-1 container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <Link href="/portfolio" className="card hover:shadow-lg transition-shadow bg-gradient-to-br from-blue-50 to-indigo-100 border-2 border-blue-400">
+            <h2 className="text-xl font-bold mb-2 text-blue-700">📈 Portfolio Dashboard</h2>
+            <p className="text-gray-700">Executive portfolio overview with KPIs, risks, changes & milestones</p>
+          </Link>
+
           <Link href="/dashboard" className="card hover:shadow-lg transition-shadow">
             <h2 className="text-xl font-bold mb-2 text-blue-600">📊 Dashboard</h2>
             <p className="text-gray-600">View project metrics, RAG status, SPI/CPI, and EAC</p>
