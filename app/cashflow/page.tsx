@@ -32,6 +32,7 @@ export default function CashflowPage() {
       if (!response.ok) {
         throw new Error(`Failed to fetch cashflows: ${response.statusText}`)
       }
+      // API returns paginated response: { data: Cashflow[], total: number, page: number, perPage: number }
       const data = await response.json()
       setCashflows(data.data || [])
     } catch (err) {

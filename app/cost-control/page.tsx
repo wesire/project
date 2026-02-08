@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   LineChart,
   Line,
@@ -91,17 +91,6 @@ export default function CostControlPage() {
   const [period, setPeriod] = useState<'weekly' | 'monthly'>('monthly');
   const [projects, setProjects] = useState<Project[]>([]);
 
-  useEffect(() => {
-    fetchProjects();
-  }, []);
-
-  useEffect(() => {
-    if (selectedProject) {
-      fetchAnalytics();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedProject, period]);
-
   const fetchProjects = async () => {
     try {
       const response = await apiFetch('/api/projects');
@@ -119,7 +108,9 @@ export default function CostControlPage() {
     }
   };
 
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = useCallback(async () => {
+    if (!selectedProject) return;
+    
     setLoading(true);
     setError(null);
     try {
@@ -137,7 +128,28 @@ export default function CostControlPage() {
     } finally {
       setLoading(false);
     }
+  }, [selectedProject, period]);
+
+  const handleRetry = () => {
+    // Retry both projects and analytics to handle all error scenarios
+    setError(null);
+    setLoading(true);
+    fetchProjects().then(() => {
+      if (selectedProject) {
+        fetchAnalytics();
+      }
+    });
   };
+
+  useEffect(() => {
+    fetchProjects();
+  }, []);
+
+  useEffect(() => {
+    if (selectedProject) {
+      fetchAnalytics();
+    }
+  }, [selectedProject, period, fetchAnalytics]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-GB', {
@@ -188,7 +200,7 @@ export default function CostControlPage() {
               <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Cost Control Data</h3>
               <p className="text-red-700 mb-4">{error}</p>
               <button
-                onClick={fetchAnalytics}
+                onClick={handleRetry}
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
               >
                 Retry
@@ -214,7 +226,7 @@ export default function CostControlPage() {
               <h3 className="text-lg font-semibold text-yellow-800 mb-2">No Data Available</h3>
               <p className="text-yellow-700 mb-4">No analytics data available. Please try again or select a different project.</p>
               <button
-                onClick={fetchAnalytics}
+                onClick={handleRetry}
                 className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-medium transition-colors"
               >
                 Retry
