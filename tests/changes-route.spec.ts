@@ -34,11 +34,11 @@ test.describe('Changes Route', () => {
     await page.goto('/changes');
     await page.waitForLoadState('networkidle');
     
-    // Check that summary cards are visible
-    await expect(page.getByText('Total Changes')).toBeVisible();
-    await expect(page.getByText('Approved')).toBeVisible();
-    await expect(page.getByText('Total Cost Impact')).toBeVisible();
-    await expect(page.getByText('Total Time Impact')).toBeVisible();
+    // Check that summary cards are visible - use role to be more specific
+    await expect(page.getByRole('heading', { name: 'Total Changes', level: 3 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Approved', level: 3 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Total Cost Impact', level: 3 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Total Time Impact', level: 3 })).toBeVisible();
   });
 
   test('should display workflow information', async ({ page }) => {
@@ -48,12 +48,12 @@ test.describe('Changes Route', () => {
     // Scroll to workflow section
     await page.getByRole('heading', { name: 'Change Order Workflow' }).scrollIntoViewIfNeeded();
     
-    // Check workflow stages are visible
-    await expect(page.getByText('DRAFT')).toBeVisible();
-    await expect(page.getByText('SUBMITTED')).toBeVisible();
-    await expect(page.getByText('UNDER REVIEW')).toBeVisible();
-    await expect(page.getByText('APPROVED')).toBeVisible();
-    await expect(page.getByText('IMPLEMENTED')).toBeVisible();
+    // Check workflow stages are visible - use .first() to avoid strict mode violations
+    await expect(page.getByText('DRAFT').first()).toBeVisible();
+    await expect(page.getByText('SUBMITTED').first()).toBeVisible();
+    await expect(page.getByText('UNDER REVIEW').first()).toBeVisible();
+    await expect(page.getByText('APPROVED').first()).toBeVisible();
+    await expect(page.getByText('IMPLEMENTED').first()).toBeVisible();
   });
 
   test('should have home navigation link', async ({ page }) => {

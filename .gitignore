@@ -14,3 +14,8 @@ yarn-error.log*
 tsconfig.tsbuildinfo
 
 /generated/prisma
+
+# Playwright test results
+/test-results
+/playwright-report
+/playwright/.cache
