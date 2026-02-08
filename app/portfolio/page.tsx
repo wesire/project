@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
 interface KPIs {
@@ -75,20 +76,38 @@ export default function PortfolioDashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [authError, setAuthError] = useState(false)
+  const router = useRouter()
 
   useEffect(() => {
+    const token = localStorage.getItem('authToken')
+    
+    if (!token) {
+      setIsAuthenticated(false)
+      setLoading(false)
+      return
+    }
+    
+    setIsAuthenticated(true)
     fetchDashboardData()
+    // Only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const fetchDashboardData = async () => {
     try {
       setLoading(true)
       setError(null)
+      setAuthError(false)
       
       const token = localStorage.getItem('authToken')
       
       if (!token) {
-        throw new Error('Authentication required. Please log in.')
+        setIsAuthenticated(false)
+        setAuthError(true)
+        setLoading(false)
+        return
       }
       
       const response = await fetch('/api/portfolio/dashboard', {
@@ -96,6 +115,16 @@ export default function PortfolioDashboard() {
           'Authorization': `Bearer ${token}`,
         },
       })
+
+      if (response.status === 401) {
+        // Token is invalid or expired
+        localStorage.removeItem('authToken')
+        setIsAuthenticated(false)
+        setAuthError(true)
+        setError('Your session has expired. Please log in again.')
+        setLoading(false)
+        return
+      }
 
       if (!response.ok) {
         throw new Error('Failed to fetch dashboard data')
@@ -109,6 +138,10 @@ export default function PortfolioDashboard() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleLogin = () => {
+    router.push('/login?returnUrl=/portfolio')
   }
 
   const formatCurrency = (amount: number) => {
@@ -157,14 +190,81 @@ export default function PortfolioDashboard() {
     )
   }
 
-  if (error || !data) {
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="card max-w-md">
+          <div className="text-center">
+            <div className="text-blue-600 text-5xl mb-4">🔒</div>
+            <h2 className="text-xl font-bold text-gray-800 mb-2">Authentication Required</h2>
+            <p className="text-gray-600 mb-6">
+              Please log in to access the portfolio dashboard.
+            </p>
+            <div className="space-y-3">
+              <button 
+                onClick={handleLogin}
+                className="btn btn-primary w-full"
+              >
+                Sign In
+              </button>
+              <Link 
+                href="/"
+                className="btn bg-gray-100 hover:bg-gray-200 text-gray-700 w-full inline-block text-center"
+              >
+                ← Back to Home
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="card max-w-md">
           <div className="text-center">
             <div className="text-red-600 text-5xl mb-4">⚠️</div>
             <h2 className="text-xl font-bold text-gray-800 mb-2">Error Loading Dashboard</h2>
-            <p className="text-gray-600 mb-4">{error || 'Failed to load dashboard data'}</p>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <div className="space-y-3">
+              {authError ? (
+                <button 
+                  onClick={handleLogin}
+                  className="btn btn-primary w-full"
+                >
+                  Sign In Again
+                </button>
+              ) : (
+                <button 
+                  onClick={fetchDashboardData}
+                  className="btn btn-primary w-full"
+                >
+                  Retry
+                </button>
+              )}
+              <Link 
+                href="/"
+                className="btn bg-gray-100 hover:bg-gray-200 text-gray-700 w-full inline-block text-center"
+              >
+                ← Back to Home
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!data) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="card max-w-md">
+          <div className="text-center">
+            <div className="text-gray-400 text-5xl mb-4">📊</div>
+            <h2 className="text-xl font-bold text-gray-800 mb-2">No Data Available</h2>
+            <p className="text-gray-600 mb-4">Unable to load dashboard data.</p>
             <button 
               onClick={fetchDashboardData}
               className="btn btn-primary"
