@@ -1,75 +1,69 @@
 'use client'
 
 import Link from 'next/link'
-import { use } from 'react'
+import { use, useState, useEffect } from 'react'
+import toast, { Toaster } from 'react-hot-toast'
+
+interface Task {
+  id: string
+  taskNumber: string
+  title: string
+  description?: string
+  status: string
+  priority: string
+  progress?: number
+  startDate?: string
+  endDate?: string
+  assignedTo?: {
+    id: string
+    name: string
+  }
+}
+
+interface Sprint {
+  id: string
+  name: string
+  goal?: string
+  startDate: string
+  endDate: string
+  status: string
+}
 
 export default function ProjectTasksPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
-  
-  // Sample data - in real implementation, fetch from API filtered by project id
-  const sprints = [
-    {
-      id: '1',
-      name: 'Sprint 1 - Foundation Work',
-      startDate: '2024-01-15',
-      endDate: '2024-02-15',
-      status: 'COMPLETED',
-    },
-    {
-      id: '2',
-      name: 'Sprint 2 - Ground Floor',
-      startDate: '2024-02-16',
-      endDate: '2024-03-31',
-      status: 'ACTIVE',
-    },
-  ]
+  const [isLoading, setIsLoading] = useState(true)
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [sprints, setSprints] = useState<Sprint[]>([])
 
-  const tasks = [
-    {
-      id: '1',
-      taskNumber: 'T001',
-      title: 'Site Preparation',
-      status: 'DONE',
-      priority: 'HIGH',
-      progress: 100,
-      startDate: '2024-01-15',
-      endDate: '2024-01-22',
-      assignedTo: 'John Smith',
-    },
-    {
-      id: '2',
-      taskNumber: 'T002',
-      title: 'Foundation Excavation',
-      status: 'DONE',
-      priority: 'CRITICAL',
-      progress: 100,
-      startDate: '2024-01-23',
-      endDate: '2024-02-05',
-      assignedTo: 'Mike Johnson',
-    },
-    {
-      id: '3',
-      taskNumber: 'T003',
-      title: 'Ground Floor Framing',
-      status: 'IN_PROGRESS',
-      priority: 'HIGH',
-      progress: 65,
-      startDate: '2024-02-16',
-      endDate: '2024-03-15',
-      assignedTo: 'Sarah Williams',
-    },
-    {
-      id: '4',
-      taskNumber: 'T004',
-      title: 'Electrical Rough-in',
-      status: 'TODO',
-      priority: 'MEDIUM',
-      progress: 0,
-      startDate: '2024-03-16',
-      endDate: '2024-03-31',
-      assignedTo: 'David Brown',
-    },
-  ]
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch both tasks and sprints in parallel
+        const [tasksResponse, sprintsResponse] = await Promise.all([
+          fetch(`/api/tasks?projectId=${id}`),
+          fetch(`/api/sprints?projectId=${id}`)
+        ])
+
+        if (!tasksResponse.ok || !sprintsResponse.ok) {
+          throw new Error('Failed to fetch data')
+        }
+
+        const tasksData = await tasksResponse.json()
+        const sprintsData = await sprintsResponse.json()
+
+        // Handle both paginated and non-paginated responses
+        setTasks(Array.isArray(tasksData) ? tasksData : (tasksData.data || []))
+        setSprints(Array.isArray(sprintsData) ? sprintsData : (sprintsData.data || []))
+      } catch (error) {
+        console.error('Error fetching data:', error)
+        toast.error('Failed to load tasks and sprints')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [id])
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -92,8 +86,20 @@ export default function ProjectTasksPage({ params }: { params: Promise<{ id: str
     }
   }
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading tasks...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
+      <Toaster position="top-right" />
       <header className="bg-green-600 text-white py-6 shadow-lg">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center">
@@ -136,67 +142,81 @@ export default function ProjectTasksPage({ params }: { params: Promise<{ id: str
 
         <div className="mb-8">
           <h2 className="text-2xl font-bold mb-4">Sprints</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {sprints.map(sprint => (
-              <div key={sprint.id} className="card">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-xl font-bold">{sprint.name}</h3>
-                  <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                    sprint.status === 'ACTIVE' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {sprint.status}
-                  </span>
+          {sprints.length === 0 ? (
+            <div className="card text-center py-8">
+              <p className="text-gray-600">No sprints found for this project.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {sprints.map(sprint => (
+                <div key={sprint.id} className="card">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="text-xl font-bold">{sprint.name}</h3>
+                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                      sprint.status === 'ACTIVE' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {sprint.status}
+                    </span>
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    {new Date(sprint.startDate).toLocaleDateString('en-GB')} - {new Date(sprint.endDate).toLocaleDateString('en-GB')}
+                  </div>
                 </div>
-                <div className="text-sm text-gray-600">
-                  {new Date(sprint.startDate).toLocaleDateString('en-GB')} - {new Date(sprint.endDate).toLocaleDateString('en-GB')}
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div>
           <h2 className="text-2xl font-bold mb-4">All Tasks</h2>
-          <div className="space-y-4">
-            {tasks.map(task => (
-              <div key={task.id} className="card hover:shadow-lg transition-shadow">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-xl font-bold">{task.title}</h3>
-                      <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(task.status)}`}>
-                        {task.status.replace('_', ' ')}
-                      </span>
-                      <span className={`text-sm font-semibold ${getPriorityColor(task.priority)}`}>
-                        {task.priority}
-                      </span>
+          {tasks.length === 0 ? (
+            <div className="card text-center py-8">
+              <p className="text-gray-600">No tasks found for this project.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {tasks.map(task => (
+                <div key={task.id} className="card hover:shadow-lg transition-shadow">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="text-xl font-bold">{task.title}</h3>
+                        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(task.status)}`}>
+                          {task.status.replace('_', ' ')}
+                        </span>
+                        <span className={`text-sm font-semibold ${getPriorityColor(task.priority)}`}>
+                          {task.priority}
+                        </span>
+                      </div>
+                      <p className="text-gray-600 text-sm">
+                        {task.taskNumber} {task.assignedTo && `• Assigned to: ${task.assignedTo.name}`}
+                      </p>
                     </div>
-                    <p className="text-gray-600 text-sm">
-                      {task.taskNumber} • Assigned to: {task.assignedTo}
-                    </p>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-600">Progress</p>
+                      <p className="text-2xl font-bold">{task.progress || 0}%</p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-600">Progress</p>
-                    <p className="text-2xl font-bold">{task.progress}%</p>
-                  </div>
-                </div>
 
-                <div className="mb-2">
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-green-600 h-2 rounded-full"
-                      style={{ width: `${task.progress}%` }}
-                    ></div>
+                  <div className="mb-2">
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-green-600 h-2 rounded-full"
+                        style={{ width: `${task.progress || 0}%` }}
+                      ></div>
+                    </div>
                   </div>
-                </div>
 
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span>Start: {new Date(task.startDate).toLocaleDateString('en-GB')}</span>
-                  <span>End: {new Date(task.endDate).toLocaleDateString('en-GB')}</span>
+                  {task.startDate && task.endDate && (
+                    <div className="flex justify-between text-sm text-gray-600">
+                      <span>Start: {new Date(task.startDate).toLocaleDateString('en-GB')}</span>
+                      <span>End: {new Date(task.endDate).toLocaleDateString('en-GB')}</span>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </main>
     </div>

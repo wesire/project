@@ -1,8 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { use, useState, useMemo } from 'react'
+import { use, useState, useMemo, useEffect } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import toast, { Toaster } from 'react-hot-toast'
 
 interface Risk {
   id: string
@@ -14,69 +15,42 @@ interface Risk {
   impact: number
   score: number
   status: string
-  owner: string
-  mitigation: string
-  contingency: string
-  mitigationDueDate: string
+  owner?: string
+  mitigation?: string
+  contingency?: string
+  mitigationDueDate?: string
   createdAt: string
 }
 
 export default function ProjectRisksPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
-  
-  // Sample data - in real implementation, fetch from API filtered by project id
-  const [risks, setRisks] = useState<Risk[]>([
-    { 
-      id: '1', 
-      riskNumber: 'R001', 
-      title: 'Foundation Delays', 
-      description: 'Potential delays in foundation work due to soil conditions and weather',
-      category: 'Schedule', 
-      probability: 4, 
-      impact: 5, 
-      score: 20, 
-      status: 'OPEN', 
-      owner: 'John Smith',
-      mitigation: 'Conduct soil testing, schedule extra crew, have backup equipment ready',
-      contingency: 'Fast-track other activities, add night shifts if necessary',
-      mitigationDueDate: '2024-01-15',
-      createdAt: '2024-01-01'
-    },
-    { 
-      id: '2', 
-      riskNumber: 'R002', 
-      title: 'Material Cost Increase', 
-      description: 'Rising prices for steel and concrete materials',
-      category: 'Cost', 
-      probability: 3, 
-      impact: 4, 
-      score: 12, 
-      status: 'OPEN', 
-      owner: 'Sarah Johnson',
-      mitigation: 'Lock in prices with suppliers, explore alternative materials',
-      contingency: 'Access contingency budget, negotiate payment terms',
-      mitigationDueDate: '2024-02-01',
-      createdAt: '2024-01-02'
-    },
-    { 
-      id: '3', 
-      riskNumber: 'R003', 
-      title: 'Weather Delays', 
-      description: 'Adverse weather conditions affecting outdoor construction',
-      category: 'Schedule', 
-      probability: 3, 
-      impact: 3, 
-      score: 9, 
-      status: 'MITIGATED', 
-      owner: 'Mike Brown',
-      mitigation: 'Weather protection systems installed, flexible scheduling implemented',
-      contingency: 'Indoor work prioritization during bad weather',
-      mitigationDueDate: '2023-12-20',
-      createdAt: '2023-12-15'
-    },
-  ])
-
+  const [isLoading, setIsLoading] = useState(true)
+  const [risks, setRisks] = useState<Risk[]>([])
   const [activeTab, setActiveTab] = useState('register')
+
+  useEffect(() => {
+    const fetchRisks = async () => {
+      try {
+        const response = await fetch(`/api/risks?projectId=${id}`)
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch risks')
+        }
+        
+        const data = await response.json()
+        // Handle both paginated and non-paginated responses
+        const risksData = data.data || data
+        setRisks(Array.isArray(risksData) ? risksData : [])
+      } catch (error) {
+        console.error('Error fetching risks:', error)
+        toast.error('Failed to load risks')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchRisks()
+  }, [id])
 
   const risksByCategory = useMemo(() => {
     const grouped: { [key: string]: Risk[] } = {}
@@ -121,8 +95,20 @@ export default function ProjectRisksPage({ params }: { params: Promise<{ id: str
     return 'Low'
   }
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading risks...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
+      <Toaster position="top-right" />
       <header className="bg-red-600 text-white py-6 shadow-lg">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center">
@@ -189,46 +175,56 @@ export default function ProjectRisksPage({ params }: { params: Promise<{ id: str
             </div>
 
             <div className="grid grid-cols-1 gap-4">
-              {risks.map(risk => (
-                <div key={risk.id} className="card hover:shadow-lg transition-shadow">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-xl font-bold">{risk.title}</h3>
-                        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(risk.status)}`}>
-                          {risk.status}
-                        </span>
-                        <span className={`px-3 py-1 rounded-full text-sm font-semibold text-white ${getRiskLevelColor(risk.score)}`}>
-                          {getRiskLevelText(risk.score)}
-                        </span>
-                      </div>
-                      <p className="text-gray-600 text-sm">
-                        {risk.riskNumber} • {risk.category} • Owner: {risk.owner}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm text-gray-600">Risk Score</p>
-                      <p className="text-2xl font-bold">{risk.score}</p>
-                      <p className="text-xs text-gray-500">P:{risk.probability} × I:{risk.impact}</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div>
-                      <p className="text-sm font-semibold text-gray-700">Description:</p>
-                      <p className="text-gray-600">{risk.description}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-gray-700">Mitigation:</p>
-                      <p className="text-gray-600">{risk.mitigation}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-gray-700">Contingency:</p>
-                      <p className="text-gray-600">{risk.contingency}</p>
-                    </div>
-                  </div>
+              {risks.length === 0 ? (
+                <div className="card text-center py-8">
+                  <p className="text-gray-600">No risks found for this project.</p>
                 </div>
-              ))}
+              ) : (
+                risks.map(risk => (
+                  <div key={risk.id} className="card hover:shadow-lg transition-shadow">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="text-xl font-bold">{risk.title}</h3>
+                          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(risk.status)}`}>
+                            {risk.status}
+                          </span>
+                          <span className={`px-3 py-1 rounded-full text-sm font-semibold text-white ${getRiskLevelColor(risk.score)}`}>
+                            {getRiskLevelText(risk.score)}
+                          </span>
+                        </div>
+                        <p className="text-gray-600 text-sm">
+                          {risk.riskNumber} • {risk.category} {risk.owner && `• Owner: ${risk.owner}`}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-gray-600">Risk Score</p>
+                        <p className="text-2xl font-bold">{risk.score}</p>
+                        <p className="text-xs text-gray-500">P:{risk.probability} × I:{risk.impact}</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-700">Description:</p>
+                        <p className="text-gray-600">{risk.description}</p>
+                      </div>
+                      {risk.mitigation && (
+                        <div>
+                          <p className="text-sm font-semibold text-gray-700">Mitigation:</p>
+                          <p className="text-gray-600">{risk.mitigation}</p>
+                        </div>
+                      )}
+                      {risk.contingency && (
+                        <div>
+                          <p className="text-sm font-semibold text-gray-700">Contingency:</p>
+                          <p className="text-gray-600">{risk.contingency}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}
