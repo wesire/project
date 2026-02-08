@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       role: user.role,
     })
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       data: {
         token,
@@ -45,6 +45,17 @@ export async function POST(request: NextRequest) {
         },
       }
     })
+
+    // Set token in cookie for consistent auth
+    response.cookies.set('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: '/',
+    })
+
+    return response
   } catch (error) {
     return handleApiError(error)
   }

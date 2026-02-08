@@ -10,15 +10,30 @@ import { hasRole, hasPermission } from './rbac'
 
 /**
  * Extract and verify JWT token from request
+ * Accepts Bearer token OR auth cookie (token/jwt)
  */
 export async function authenticateRequest(request: NextRequest): Promise<TokenPayload> {
+  // Try Bearer token first
   const authHeader = request.headers.get('authorization')
+  let token: string | undefined
   
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.substring(7)
+  }
+  
+  // If no Bearer token, try cookies
+  if (!token) {
+    const cookieToken = request.cookies.get('token')?.value || request.cookies.get('jwt')?.value
+    if (cookieToken) {
+      token = cookieToken
+    }
+  }
+  
+  // Return 401 only if both methods are missing
+  if (!token) {
     throw new AuthenticationError('No authentication token provided')
   }
   
-  const token = authHeader.substring(7)
   const payload = verifyToken(token)
   
   if (!payload) {
