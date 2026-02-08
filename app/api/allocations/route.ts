@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { authenticateRequest, requirePermission } from '@/lib/middleware'
-import { createProjectSchema, validateData } from '@/lib/validation'
+import { createResourceAllocationSchema, validateData } from '@/lib/validation'
 import {
   getPaginationParams,
   getSortParams,
@@ -11,7 +11,7 @@ import {
   combineWhereClause,
   createPaginatedResponse
 } from '@/lib/api-utils'
-import { filterByProjectAccess } from '@/lib/project-permissions'
+import { filterByResourceProjectAccess, requireProjectPermission } from '@/lib/project-permissions'
 import { AuthenticationError, ValidationError } from '@/lib/errors'
 import { UserRole } from '@/lib/types'
 
@@ -25,67 +25,61 @@ export async function GET(request: NextRequest) {
     
     // Get sorting params
     const allowedSortFields = [
-      'projectNumber', 'name', 'status', 'startDate', 
-      'endDate', 'budget', 'createdAt', 'updatedAt'
+      'resourceType', 'allocatedHours', 'utilization', 
+      'startDate', 'endDate', 'createdAt', 'updatedAt'
     ]
-    const { orderBy } = getSortParams(request, allowedSortFields)
+    const { orderBy } = getSortParams(request, allowedSortFields, { createdAt: 'desc' })
     
     // Get search params
-    const allowedSearchFields = ['projectNumber', 'name', 'description', 'client', 'location']
+    const allowedSearchFields = ['resourceType']
     const { search, searchFields } = getSearchParams(request, allowedSearchFields)
     const searchWhere = buildSearchWhere(search, searchFields)
     
     // Get filter params
-    const allowedFilterFields = ['status', 'currency', 'client', 'location']
+    const allowedFilterFields = ['projectId', 'userId', 'resourceId', 'resourceType']
     const filterWhere = getFilterParams(request, allowedFilterFields)
     
     // Combine where clauses and apply project access
     const baseWhere = combineWhereClause(searchWhere, filterWhere)
-    const where = await filterByProjectAccess(user.userId, user.role as UserRole, baseWhere)
+    const where = await filterByResourceProjectAccess(user.userId, user.role as UserRole, baseWhere)
     
     // Get total count
-    const total = await prisma.project.count({ where })
+    const total = await prisma.resourceAllocation.count({ where })
     
-    // Get projects
-    const projects = await prisma.project.findMany({
+    // Get allocations
+    const allocations = await prisma.resourceAllocation.findMany({
       where,
       skip,
       take,
       orderBy,
       include: {
-        createdBy: {
+        project: {
+          select: {
+            id: true,
+            name: true,
+            projectNumber: true,
+          },
+        },
+        user: {
           select: {
             id: true,
             name: true,
             email: true,
           },
         },
-        members: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                role: true,
-              },
-            },
-          },
-        },
-        _count: {
+        resource: {
           select: {
-            risks: true,
-            changes: true,
-            tasks: true,
-            issues: true,
+            id: true,
+            name: true,
+            type: true,
           },
         },
       },
     })
 
-    return NextResponse.json(createPaginatedResponse(projects, total, page, perPage))
+    return NextResponse.json(createPaginatedResponse(allocations, total, page, perPage))
   } catch (error) {
-    console.error('Error fetching projects:', error)
+    console.error('Error fetching resource allocations:', error)
     
     if (error instanceof AuthenticationError) {
       return NextResponse.json(
@@ -103,56 +97,75 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Require project:create permission
-    const user = await requirePermission(request, 'project:create')
+    // Require allocation:create permission
+    const user = await requirePermission(request, 'allocation:create')
     
     const body = await request.json()
     
     // Validate request body
-    const validatedData = validateData(createProjectSchema, body)
+    const validatedData = validateData(createResourceAllocationSchema, body)
     
-    const project = await prisma.project.create({
+    // Check project access
+    await requireProjectPermission(
+      user.userId,
+      user.role as UserRole,
+      validatedData.projectId,
+      'allocation:create'
+    )
+
+    const allocation = await prisma.resourceAllocation.create({
       data: {
-        projectNumber: validatedData.projectNumber,
-        name: validatedData.name,
-        description: validatedData.description,
-        status: validatedData.status || 'PLANNING',
+        projectId: validatedData.projectId,
+        userId: validatedData.userId,
+        resourceId: validatedData.resourceId,
+        resourceType: validatedData.resourceType,
+        allocatedHours: validatedData.allocatedHours,
+        utilization: validatedData.utilization,
         startDate: new Date(validatedData.startDate),
         endDate: new Date(validatedData.endDate),
-        budget: validatedData.budget,
-        currency: validatedData.currency || 'GBP',
-        location: validatedData.location,
-        client: validatedData.client,
-        createdById: user.userId,
       },
       include: {
-        createdBy: {
+        project: {
+          select: {
+            id: true,
+            name: true,
+            projectNumber: true,
+          },
+        },
+        user: {
           select: {
             id: true,
             name: true,
             email: true,
           },
         },
+        resource: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
+          },
+        },
       },
     })
-
+    
     // Create audit log
     await prisma.auditLog.create({
       data: {
-        projectId: project.id,
+        projectId: allocation.projectId,
         userId: user.userId,
         action: 'CREATE',
-        entityType: 'Project',
-        entityId: project.id,
+        entityType: 'ResourceAllocation',
+        entityId: allocation.id,
         changes: {
-          created: project,
+          created: allocation,
         },
       },
     })
 
-    return NextResponse.json(project, { status: 201 })
+    return NextResponse.json(allocation, { status: 201 })
   } catch (error) {
-    console.error('Error creating project:', error)
+    console.error('Error creating resource allocation:', error)
     
     if (error instanceof AuthenticationError) {
       return NextResponse.json(

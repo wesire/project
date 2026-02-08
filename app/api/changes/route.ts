@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { authenticateRequest, requirePermission } from '@/lib/middleware'
-import { createProjectSchema, validateData } from '@/lib/validation'
+import { createChangeOrderSchema, validateData } from '@/lib/validation'
 import {
   getPaginationParams,
   getSortParams,
@@ -11,7 +11,7 @@ import {
   combineWhereClause,
   createPaginatedResponse
 } from '@/lib/api-utils'
-import { filterByProjectAccess } from '@/lib/project-permissions'
+import { filterByResourceProjectAccess, requireProjectPermission } from '@/lib/project-permissions'
 import { AuthenticationError, ValidationError } from '@/lib/errors'
 import { UserRole } from '@/lib/types'
 
@@ -25,67 +25,47 @@ export async function GET(request: NextRequest) {
     
     // Get sorting params
     const allowedSortFields = [
-      'projectNumber', 'name', 'status', 'startDate', 
-      'endDate', 'budget', 'createdAt', 'updatedAt'
+      'changeNumber', 'title', 'status', 'costImpact', 
+      'timeImpact', 'submittedDate', 'createdAt', 'updatedAt'
     ]
-    const { orderBy } = getSortParams(request, allowedSortFields)
+    const { orderBy } = getSortParams(request, allowedSortFields, { createdAt: 'desc' })
     
     // Get search params
-    const allowedSearchFields = ['projectNumber', 'name', 'description', 'client', 'location']
+    const allowedSearchFields = ['changeNumber', 'title', 'description', 'requestedBy', 'approvedBy']
     const { search, searchFields } = getSearchParams(request, allowedSearchFields)
     const searchWhere = buildSearchWhere(search, searchFields)
     
     // Get filter params
-    const allowedFilterFields = ['status', 'currency', 'client', 'location']
+    const allowedFilterFields = ['projectId', 'status', 'requestedBy', 'approvedBy']
     const filterWhere = getFilterParams(request, allowedFilterFields)
     
     // Combine where clauses and apply project access
     const baseWhere = combineWhereClause(searchWhere, filterWhere)
-    const where = await filterByProjectAccess(user.userId, user.role as UserRole, baseWhere)
+    const where = await filterByResourceProjectAccess(user.userId, user.role as UserRole, baseWhere)
     
     // Get total count
-    const total = await prisma.project.count({ where })
+    const total = await prisma.changeOrder.count({ where })
     
-    // Get projects
-    const projects = await prisma.project.findMany({
+    // Get change orders
+    const changes = await prisma.changeOrder.findMany({
       where,
       skip,
       take,
       orderBy,
       include: {
-        createdBy: {
+        project: {
           select: {
             id: true,
             name: true,
-            email: true,
-          },
-        },
-        members: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                role: true,
-              },
-            },
-          },
-        },
-        _count: {
-          select: {
-            risks: true,
-            changes: true,
-            tasks: true,
-            issues: true,
+            projectNumber: true,
           },
         },
       },
     })
 
-    return NextResponse.json(createPaginatedResponse(projects, total, page, perPage))
+    return NextResponse.json(createPaginatedResponse(changes, total, page, perPage))
   } catch (error) {
-    console.error('Error fetching projects:', error)
+    console.error('Error fetching change orders:', error)
     
     if (error instanceof AuthenticationError) {
       return NextResponse.json(
@@ -103,56 +83,61 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Require project:create permission
-    const user = await requirePermission(request, 'project:create')
+    // Require change:create permission
+    const user = await requirePermission(request, 'change:create')
     
     const body = await request.json()
     
     // Validate request body
-    const validatedData = validateData(createProjectSchema, body)
+    const validatedData = validateData(createChangeOrderSchema, body)
     
-    const project = await prisma.project.create({
+    // Check project access
+    await requireProjectPermission(
+      user.userId,
+      user.role as UserRole,
+      validatedData.projectId,
+      'change:create'
+    )
+
+    const change = await prisma.changeOrder.create({
       data: {
-        projectNumber: validatedData.projectNumber,
-        name: validatedData.name,
+        projectId: validatedData.projectId,
+        changeNumber: validatedData.changeNumber,
+        title: validatedData.title,
         description: validatedData.description,
-        status: validatedData.status || 'PLANNING',
-        startDate: new Date(validatedData.startDate),
-        endDate: new Date(validatedData.endDate),
-        budget: validatedData.budget,
-        currency: validatedData.currency || 'GBP',
-        location: validatedData.location,
-        client: validatedData.client,
-        createdById: user.userId,
+        requestedBy: validatedData.requestedBy,
+        costImpact: validatedData.costImpact,
+        timeImpact: validatedData.timeImpact,
+        status: 'SUBMITTED',
       },
       include: {
-        createdBy: {
+        project: {
           select: {
             id: true,
             name: true,
-            email: true,
+            projectNumber: true,
           },
         },
       },
     })
-
+    
     // Create audit log
     await prisma.auditLog.create({
       data: {
-        projectId: project.id,
+        projectId: change.projectId,
         userId: user.userId,
         action: 'CREATE',
-        entityType: 'Project',
-        entityId: project.id,
+        entityType: 'ChangeOrder',
+        entityId: change.id,
         changes: {
-          created: project,
+          created: change,
         },
       },
     })
 
-    return NextResponse.json(project, { status: 201 })
+    return NextResponse.json(change, { status: 201 })
   } catch (error) {
-    console.error('Error creating project:', error)
+    console.error('Error creating change order:', error)
     
     if (error instanceof AuthenticationError) {
       return NextResponse.json(
