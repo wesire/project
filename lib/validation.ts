@@ -54,6 +54,7 @@ export const updateRiskSchema = createRiskSchema.partial()
 export const createTaskSchema = z.object({
   projectId: z.string().cuid(),
   sprintId: z.string().cuid().optional(),
+  milestoneId: z.string().cuid().optional(),
   changeOrderId: z.string().cuid().optional(),
   taskNumber: z.string().min(1, 'Task number is required'),
   title: z.string().min(3, 'Title must be at least 3 characters'),
@@ -64,6 +65,9 @@ export const createTaskSchema = z.object({
   estimatedHours: z.number().positive().optional(),
   startDate: z.string().datetime().or(z.date()).optional(),
   endDate: z.string().datetime().or(z.date()).optional(),
+  baselineStartDate: z.string().datetime().or(z.date()).optional(),
+  baselineEndDate: z.string().datetime().or(z.date()).optional(),
+  isCriticalPath: z.boolean().optional(),
   dependencies: z.array(z.string()).optional()
 })
 
@@ -104,6 +108,19 @@ export const createSprintSchema = z.object({
 })
 
 export const updateSprintSchema = createSprintSchema.partial()
+
+// Milestone validation schemas
+export const createMilestoneSchema = z.object({
+  projectId: z.string().cuid(),
+  name: z.string().min(3, 'Name must be at least 3 characters'),
+  description: z.string().optional(),
+  dueDate: z.string().datetime().or(z.date()),
+  baselineDueDate: z.string().datetime().or(z.date()).optional(),
+  status: z.enum(['PENDING', 'IN_PROGRESS', 'COMPLETED', 'DELAYED']).optional(),
+  owner: z.string().optional()
+})
+
+export const updateMilestoneSchema = createMilestoneSchema.partial()
 
 // Resource validation schemas
 export const createResourceSchema = z.object({

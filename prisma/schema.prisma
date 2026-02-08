@@ -236,6 +236,11 @@ model Task {
   startDate    DateTime?
   endDate      DateTime?
   dependencies String[] // Array of task IDs
+  
+  // Schedule management fields
+  baselineStartDate DateTime? // Original planned start date
+  baselineEndDate   DateTime? // Original planned end date
+  isCriticalPath    Boolean   @default(false) // Flag for critical path tasks
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -251,6 +256,7 @@ model Task {
 }
 
 enum TaskStatus {
+  BACKLOG
   TODO
   IN_PROGRESS
   IN_REVIEW
@@ -430,6 +436,7 @@ model Milestone {
   name        String
   description String?
   dueDate     DateTime
+  baselineDueDate DateTime? // Original planned due date
   status      MilestoneStatus @default(PENDING)
   progress    Int             @default(0) // 0-100
   owner       String?
