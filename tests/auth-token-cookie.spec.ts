@@ -17,9 +17,9 @@ test.describe('Authentication Token and Cookie Support', () => {
     expect(body.error).toBe('Invalid or expired token');
   });
 
-  test('should accept auth cookie', async ({ context, request }) => {
-    // Set a cookie with auth token
-    await context.addCookies([
+  test('should accept auth cookie', async ({ page }) => {
+    // Set a cookie with auth token directly on the page context
+    await page.context().addCookies([
       {
         name: 'token',
         value: 'invalid-token-for-testing',
@@ -28,7 +28,8 @@ test.describe('Authentication Token and Cookie Support', () => {
       }
     ]);
 
-    const response = await request.get('/api/projects');
+    // Navigate to trigger API call with cookie
+    const response = await page.request.get('http://localhost:3000/api/projects');
     
     // Should return 401 for invalid token, not missing token error
     expect(response.status()).toBe(401);
