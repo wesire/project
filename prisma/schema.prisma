@@ -118,13 +118,31 @@ model Risk {
   owner       String?
   mitigation  String?
   contingency String?
-
+  mitigationDueDate DateTime? // Due date for mitigation actions
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  history RiskHistory[]
 
   @@unique([projectId, riskNumber])
+}
+
+// Risk History for trend tracking
+model RiskHistory {
+  id          String     @id @default(cuid())
+  riskId      String
+  probability Int
+  impact      Int
+  score       Int
+  status      RiskStatus
+  notes       String?
+  recordedAt  DateTime   @default(now())
+  
+  risk Risk @relation(fields: [riskId], references: [id], onDelete: Cascade)
+  
+  @@index([riskId, recordedAt])
 }
 
 enum RiskStatus {
