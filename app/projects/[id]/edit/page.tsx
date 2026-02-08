@@ -108,7 +108,18 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
   }
 
   if (!project) {
-    return null
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Toaster position="top-right" />
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Project Not Found</h2>
+          <p className="text-gray-600 mb-4">The requested project could not be found.</p>
+          <Link href="/projects" className="btn btn-primary">
+            Back to Projects
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   // Convert date strings to YYYY-MM-DD format for input

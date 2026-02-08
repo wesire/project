@@ -189,7 +189,7 @@ export default function ProjectTasksPage({ params }: { params: Promise<{ id: str
                         </span>
                       </div>
                       <p className="text-gray-600 text-sm">
-                        {task.taskNumber} {task.assignedTo && `• Assigned to: ${task.assignedTo.name}`}
+                        {task.taskNumber}{task.assignedTo && ` • Assigned to: ${task.assignedTo.name}`}
                       </p>
                     </div>
                     <div className="text-right">
