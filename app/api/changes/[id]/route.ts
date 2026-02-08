@@ -29,6 +29,30 @@ export async function GET(
             projectNumber: true,
           },
         },
+        tasks: {
+          select: {
+            id: true,
+            taskNumber: true,
+            title: true,
+            status: true,
+            assignedTo: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+        budgetLines: {
+          select: {
+            id: true,
+            category: true,
+            description: true,
+            budgeted: true,
+            spent: true,
+            committed: true,
+          },
+        },
       },
     })
     
@@ -81,7 +105,11 @@ export async function PUT(
     
     // Check if change order exists
     const existingChange = await prisma.changeOrder.findUnique({
-      where: { id: params.id }
+      where: { id: params.id },
+      include: {
+        tasks: true,
+        budgetLines: true,
+      },
     })
     
     if (!existingChange) {
@@ -108,6 +136,7 @@ export async function PUT(
     if (validatedData.title !== undefined) updateData.title = validatedData.title
     if (validatedData.description !== undefined) updateData.description = validatedData.description
     if (validatedData.requestedBy !== undefined) updateData.requestedBy = validatedData.requestedBy
+    if (validatedData.scopeImpact !== undefined) updateData.scopeImpact = validatedData.scopeImpact
     if (validatedData.costImpact !== undefined) updateData.costImpact = validatedData.costImpact
     if (validatedData.timeImpact !== undefined) updateData.timeImpact = validatedData.timeImpact
     
@@ -120,6 +149,100 @@ export async function PUT(
             id: true,
             name: true,
             projectNumber: true,
+          },
+        },
+        tasks: {
+          select: {
+            id: true,
+            taskNumber: true,
+            title: true,
+          },
+        },
+        budgetLines: {
+          select: {
+            id: true,
+            category: true,
+            description: true,
+          },
+        },
+      },
+    })
+
+    // Handle task linking if taskIds are provided
+    if (validatedData.taskIds !== undefined) {
+      // Remove old task associations
+      await prisma.task.updateMany({
+        where: {
+          changeOrderId: params.id,
+        },
+        data: {
+          changeOrderId: null,
+        },
+      })
+
+      // Add new task associations
+      if (validatedData.taskIds.length > 0) {
+        await prisma.task.updateMany({
+          where: {
+            id: { in: validatedData.taskIds },
+            projectId: existingChange.projectId,
+          },
+          data: {
+            changeOrderId: params.id,
+          },
+        })
+      }
+    }
+
+    // Handle budget line linking if budgetLineIds are provided
+    if (validatedData.budgetLineIds !== undefined) {
+      // Remove old budget line associations
+      await prisma.budgetLine.updateMany({
+        where: {
+          changeOrderId: params.id,
+        },
+        data: {
+          changeOrderId: null,
+        },
+      })
+
+      // Add new budget line associations
+      if (validatedData.budgetLineIds.length > 0) {
+        await prisma.budgetLine.updateMany({
+          where: {
+            id: { in: validatedData.budgetLineIds },
+            projectId: existingChange.projectId,
+          },
+          data: {
+            changeOrderId: params.id,
+          },
+        })
+      }
+    }
+
+    // Fetch updated change order with all relations
+    const updatedChange = await prisma.changeOrder.findUnique({
+      where: { id: params.id },
+      include: {
+        project: {
+          select: {
+            id: true,
+            name: true,
+            projectNumber: true,
+          },
+        },
+        tasks: {
+          select: {
+            id: true,
+            taskNumber: true,
+            title: true,
+          },
+        },
+        budgetLines: {
+          select: {
+            id: true,
+            category: true,
+            description: true,
           },
         },
       },
@@ -135,12 +258,12 @@ export async function PUT(
         entityId: change.id,
         changes: {
           before: existingChange,
-          after: change,
+          after: updatedChange,
         },
       },
     })
     
-    return NextResponse.json(change)
+    return NextResponse.json(updatedChange)
   } catch (error) {
     console.error('Error updating change order:', error)
     

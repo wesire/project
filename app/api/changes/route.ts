@@ -60,6 +60,21 @@ export async function GET(request: NextRequest) {
             projectNumber: true,
           },
         },
+        tasks: {
+          select: {
+            id: true,
+            taskNumber: true,
+            title: true,
+          },
+        },
+        budgetLines: {
+          select: {
+            id: true,
+            category: true,
+            description: true,
+            budgeted: true,
+          },
+        },
       },
     })
 
@@ -99,6 +114,10 @@ export async function POST(request: NextRequest) {
       'change:create'
     )
 
+    // Extract task and budget line IDs
+    const taskIds = validatedData.taskIds || []
+    const budgetLineIds = validatedData.budgetLineIds || []
+
     const change = await prisma.changeOrder.create({
       data: {
         projectId: validatedData.projectId,
@@ -106,9 +125,10 @@ export async function POST(request: NextRequest) {
         title: validatedData.title,
         description: validatedData.description,
         requestedBy: validatedData.requestedBy,
+        scopeImpact: validatedData.scopeImpact,
         costImpact: validatedData.costImpact,
         timeImpact: validatedData.timeImpact,
-        status: 'SUBMITTED',
+        status: 'DRAFT',
       },
       include: {
         project: {
@@ -116,6 +136,62 @@ export async function POST(request: NextRequest) {
             id: true,
             name: true,
             projectNumber: true,
+          },
+        },
+        tasks: true,
+        budgetLines: true,
+      },
+    })
+    
+    // Link tasks to change order if provided
+    if (taskIds.length > 0) {
+      await prisma.task.updateMany({
+        where: {
+          id: { in: taskIds },
+          projectId: validatedData.projectId,
+        },
+        data: {
+          changeOrderId: change.id,
+        },
+      })
+    }
+
+    // Link budget lines to change order if provided
+    if (budgetLineIds.length > 0) {
+      await prisma.budgetLine.updateMany({
+        where: {
+          id: { in: budgetLineIds },
+          projectId: validatedData.projectId,
+        },
+        data: {
+          changeOrderId: change.id,
+        },
+      })
+    }
+
+    // Fetch the updated change order with linked entities
+    const updatedChange = await prisma.changeOrder.findUnique({
+      where: { id: change.id },
+      include: {
+        project: {
+          select: {
+            id: true,
+            name: true,
+            projectNumber: true,
+          },
+        },
+        tasks: {
+          select: {
+            id: true,
+            taskNumber: true,
+            title: true,
+          },
+        },
+        budgetLines: {
+          select: {
+            id: true,
+            category: true,
+            description: true,
           },
         },
       },
@@ -130,12 +206,12 @@ export async function POST(request: NextRequest) {
         entityType: 'ChangeOrder',
         entityId: change.id,
         changes: {
-          created: change,
+          created: updatedChange,
         },
       },
     })
 
-    return NextResponse.json(change, { status: 201 })
+    return NextResponse.json(updatedChange, { status: 201 })
   } catch (error) {
     console.error('Error creating change order:', error)
     

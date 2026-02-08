@@ -54,6 +54,7 @@ export const updateRiskSchema = createRiskSchema.partial()
 export const createTaskSchema = z.object({
   projectId: z.string().cuid(),
   sprintId: z.string().cuid().optional(),
+  changeOrderId: z.string().cuid().optional(),
   taskNumber: z.string().min(1, 'Task number is required'),
   title: z.string().min(3, 'Title must be at least 3 characters'),
   description: z.string().optional(),
@@ -75,11 +76,23 @@ export const createChangeOrderSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters'),
   description: z.string().min(10, 'Description must be at least 10 characters'),
   requestedBy: z.string().min(1, 'Requested by is required'),
+  scopeImpact: z.string().optional(),
   costImpact: z.number().default(0),
-  timeImpact: z.number().int().default(0)
+  timeImpact: z.number().int().default(0),
+  taskIds: z.array(z.string().cuid()).optional(),
+  budgetLineIds: z.array(z.string().cuid()).optional()
 })
 
 export const updateChangeOrderSchema = createChangeOrderSchema.partial()
+
+// Change order status update schema
+export const updateChangeOrderStatusSchema = z.object({
+  status: z.enum(['DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED', 'IMPLEMENTED']),
+  approvedBy: z.string().optional(),
+  approvedDate: z.string().datetime().or(z.date()).optional(),
+  submittedDate: z.string().datetime().or(z.date()).optional(),
+  implementedDate: z.string().datetime().or(z.date()).optional()
+})
 
 // Sprint validation schemas
 export const createSprintSchema = z.object({
