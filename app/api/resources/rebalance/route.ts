@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
       where: {
         projectId: projectId,
         status: {
-          notIn: ['DONE', 'CANCELLED']
+          notIn: ['DONE']
         },
         startDate: { not: null },
         endDate: { not: null },
