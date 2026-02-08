@@ -76,7 +76,7 @@ export default function ProjectsPage() {
       <main className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold">All Projects</h2>
-          <button className="btn btn-primary">+ New Project</button>
+          <Link href="/projects/new" className="btn btn-primary">+ New Project</Link>
         </div>
 
         <div className="grid grid-cols-1 gap-6">
@@ -118,10 +118,10 @@ export default function ProjectsPage() {
               </div>
 
               <div className="flex gap-2">
-                <button className="btn btn-primary text-sm">View Details</button>
-                <button className="btn btn-secondary text-sm">Edit</button>
-                <button className="text-blue-600 hover:text-blue-800 px-3">Risks</button>
-                <button className="text-blue-600 hover:text-blue-800 px-3">Tasks</button>
+                <Link href={`/projects/${project.id}`} className="btn btn-primary text-sm">View Details</Link>
+                <Link href={`/projects/${project.id}/edit`} className="btn btn-secondary text-sm">Edit</Link>
+                <Link href={`/risks?projectId=${project.id}`} className="text-blue-600 hover:text-blue-800 px-3">Risks</Link>
+                <Link href={`/tasks?projectId=${project.id}`} className="text-blue-600 hover:text-blue-800 px-3">Tasks</Link>
               </div>
             </div>
           ))}
