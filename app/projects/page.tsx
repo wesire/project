@@ -120,8 +120,8 @@ export default function ProjectsPage() {
               <div className="flex gap-2">
                 <Link href={`/projects/${project.id}`} className="btn btn-primary text-sm">View Details</Link>
                 <Link href={`/projects/${project.id}/edit`} className="btn btn-secondary text-sm">Edit</Link>
-                <Link href={`/risks?projectId=${project.id}`} className="text-blue-600 hover:text-blue-800 px-3">Risks</Link>
-                <Link href={`/tasks?projectId=${project.id}`} className="text-blue-600 hover:text-blue-800 px-3">Tasks</Link>
+                <Link href={`/projects/${project.id}/risks`} className="text-blue-600 hover:text-blue-800 px-3">Risks</Link>
+                <Link href={`/projects/${project.id}/tasks`} className="text-blue-600 hover:text-blue-800 px-3">Tasks</Link>
               </div>
             </div>
           ))}

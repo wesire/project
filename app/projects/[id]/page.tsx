@@ -146,10 +146,10 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ id: s
                 <Link href={`/projects/${id}/edit`} className="btn btn-primary w-full">
                   Edit Project
                 </Link>
-                <Link href={`/risks?projectId=${id}`} className="btn btn-secondary w-full">
+                <Link href={`/projects/${id}/risks`} className="btn btn-secondary w-full">
                   View Risks
                 </Link>
-                <Link href={`/tasks?projectId=${id}`} className="btn btn-secondary w-full">
+                <Link href={`/projects/${id}/tasks`} className="btn btn-secondary w-full">
                   View Tasks
                 </Link>
                 <Link href={`/changes?projectId=${id}`} className="btn btn-secondary w-full">
