@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { authenticateRequest, requirePermission } from '@/lib/middleware'
-import { createResourceSchema, validateData } from '@/lib/validation'
+import { createResourceAvailabilitySchema, validateData } from '@/lib/validation'
 import {
   getPaginationParams,
   getSortParams,
-  getSearchParams,
   getFilterParams,
-  buildSearchWhere,
   combineWhereClause,
   createPaginatedResponse
 } from '@/lib/api-utils'
@@ -16,50 +14,59 @@ import { AuthenticationError, ValidationError } from '@/lib/errors'
 export async function GET(request: NextRequest) {
   try {
     // Authenticate user
-    const _user = await authenticateRequest(request)
+    await authenticateRequest(request)
     
     // Get pagination params
     const { skip, take, page, perPage } = getPaginationParams(request)
     
     // Get sorting params
-    const allowedSortFields = [
-      'name', 'type', 'costPerHour', 'availability', 'createdAt', 'updatedAt'
-    ]
-    const { orderBy } = getSortParams(request, allowedSortFields, { createdAt: 'desc' })
-    
-    // Get search params
-    const allowedSearchFields = ['name', 'description', 'availability']
-    const { search, searchFields } = getSearchParams(request, allowedSearchFields)
-    const searchWhere = buildSearchWhere(search, searchFields)
+    const allowedSortFields = ['date', 'isAvailable', 'availableHours', 'createdAt']
+    const { orderBy } = getSortParams(request, allowedSortFields, { date: 'asc' })
     
     // Get filter params
-    const allowedFilterFields = ['type', 'availability']
+    const allowedFilterFields = ['resourceId', 'isAvailable']
     const filterWhere = getFilterParams(request, allowedFilterFields)
     
-    // Combine where clauses (no project access filtering)
-    const where = combineWhereClause(searchWhere, filterWhere)
+    // Date range filtering
+    const { searchParams } = new URL(request.url)
+    const startDate = searchParams.get('startDate')
+    const endDate = searchParams.get('endDate')
+    
+    let dateFilter = {}
+    if (startDate || endDate) {
+      dateFilter = {
+        date: {
+          ...(startDate && { gte: new Date(startDate) }),
+          ...(endDate && { lte: new Date(endDate) })
+        }
+      }
+    }
+    
+    const where = combineWhereClause(filterWhere, dateFilter)
     
     // Get total count
-    const total = await prisma.resource.count({ where })
+    const total = await prisma.resourceAvailability.count({ where })
     
-    // Get resources
-    const resources = await prisma.resource.findMany({
+    // Get availability records
+    const availabilities = await prisma.resourceAvailability.findMany({
       where,
       skip,
       take,
       orderBy,
       include: {
-        _count: {
+        resource: {
           select: {
-            allocations: true,
+            id: true,
+            name: true,
+            type: true,
           },
         },
       },
     })
 
-    return NextResponse.json(createPaginatedResponse(resources, total, page, perPage))
+    return NextResponse.json(createPaginatedResponse(availabilities, total, page, perPage))
   } catch (error) {
-    console.error('Error fetching resources:', error)
+    console.error('Error fetching resource availability:', error)
     
     if (error instanceof AuthenticationError) {
       return NextResponse.json(
@@ -77,54 +84,50 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Require resource:create permission
+    // Require resource:create permission (PM or ADMIN)
     const user = await requirePermission(request, 'resource:create')
     
     const body = await request.json()
     
     // Validate request body
-    const validatedData = validateData(createResourceSchema, body)
+    const validatedData = validateData(createResourceAvailabilitySchema, body)
 
-    const resource = await prisma.resource.create({
+    const availability = await prisma.resourceAvailability.create({
       data: {
-        name: validatedData.name,
-        type: validatedData.type,
-        description: validatedData.description,
-        costPerHour: validatedData.costPerHour,
-        availability: validatedData.availability,
-        skills: validatedData.skills || [],
-        standardRate: validatedData.standardRate,
-        overtimeRate: validatedData.overtimeRate,
-        weekendRate: validatedData.weekendRate,
-        currency: validatedData.currency || 'GBP',
-        maxHoursPerDay: validatedData.maxHoursPerDay || 8,
-        maxHoursPerWeek: validatedData.maxHoursPerWeek || 40,
+        resourceId: validatedData.resourceId,
+        date: new Date(validatedData.date),
+        isAvailable: validatedData.isAvailable,
+        availableHours: validatedData.availableHours,
+        reason: validatedData.reason,
+        notes: validatedData.notes,
       },
       include: {
-        _count: {
+        resource: {
           select: {
-            allocations: true,
+            id: true,
+            name: true,
+            type: true,
           },
         },
       },
     })
     
-    // Create audit log (no projectId for resources)
+    // Create audit log
     await prisma.auditLog.create({
       data: {
         userId: user.userId,
         action: 'CREATE',
-        entityType: 'Resource',
-        entityId: resource.id,
+        entityType: 'ResourceAvailability',
+        entityId: availability.id,
         changes: {
-          created: resource,
+          created: availability,
         },
       },
     })
 
-    return NextResponse.json(resource, { status: 201 })
+    return NextResponse.json(availability, { status: 201 })
   } catch (error) {
-    console.error('Error creating resource:', error)
+    console.error('Error creating resource availability:', error)
     
     if (error instanceof AuthenticationError) {
       return NextResponse.json(

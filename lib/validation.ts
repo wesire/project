@@ -129,7 +129,13 @@ export const createResourceSchema = z.object({
   description: z.string().optional(),
   costPerHour: z.number().positive().optional(),
   availability: z.string().optional(),
-  skills: z.array(z.string()).optional()
+  skills: z.array(z.string()).optional(),
+  standardRate: z.number().positive().optional(),
+  overtimeRate: z.number().positive().optional(),
+  weekendRate: z.number().positive().optional(),
+  currency: z.string().default('GBP'),
+  maxHoursPerDay: z.number().positive().default(8),
+  maxHoursPerWeek: z.number().positive().default(40)
 })
 
 export const updateResourceSchema = createResourceSchema.partial()
@@ -147,6 +153,18 @@ export const createResourceAllocationSchema = z.object({
 })
 
 export const updateResourceAllocationSchema = createResourceAllocationSchema.partial()
+
+// ResourceAvailability validation schemas
+export const createResourceAvailabilitySchema = z.object({
+  resourceId: z.string().cuid(),
+  date: z.string().datetime().or(z.date()),
+  isAvailable: z.boolean().default(true),
+  availableHours: z.number().min(0).max(24).default(8),
+  reason: z.string().optional(),
+  notes: z.string().optional()
+})
+
+export const updateResourceAvailabilitySchema = createResourceAvailabilitySchema.partial()
 
 // Cashflow validation schemas
 export const createCashflowSchema = z.object({

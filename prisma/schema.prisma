@@ -464,11 +464,20 @@ model Resource {
   costPerHour  Float?
   availability String? // e.g., "Full-time", "Part-time", "On-demand"
   skills       String[] // Array of skills
+  
+  // Enhanced rate information
+  standardRate    Float? // Standard hourly/daily rate
+  overtimeRate    Float? // Overtime hourly rate
+  weekendRate     Float? // Weekend hourly rate
+  currency        String @default("GBP")
+  maxHoursPerDay  Float  @default(8) // Maximum available hours per day
+  maxHoursPerWeek Float  @default(40) // Maximum available hours per week
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  allocations ResourceAllocation[] @relation("ResourceAllocations")
+  allocations         ResourceAllocation[]   @relation("ResourceAllocations")
+  availabilityCalendar ResourceAvailability[]
 }
 
 enum ResourceType {
@@ -476,6 +485,27 @@ enum ResourceType {
   EQUIPMENT
   MATERIAL
   CONTRACTOR
+}
+
+// Resource Availability Calendar
+model ResourceAvailability {
+  id         String   @id @default(cuid())
+  resourceId String
+  date       DateTime
+  
+  // Availability details
+  isAvailable    Boolean @default(true)
+  availableHours Float   @default(8) // Hours available on this date
+  reason         String? // Reason for unavailability (e.g., "Holiday", "Maintenance", "Leave")
+  notes          String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  
+  @@unique([resourceId, date])
+  @@index([resourceId, date])
 }
 
 // Budget Lines
