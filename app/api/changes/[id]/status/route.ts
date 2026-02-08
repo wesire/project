@@ -97,7 +97,12 @@ export async function POST(
     }
     
     // Clear approval data if moving back to earlier states
-    if (newStatus === 'DRAFT' || newStatus === 'SUBMITTED') {
+    if (newStatus === 'DRAFT') {
+      updateData.submittedDate = null
+      updateData.approvedDate = null
+      updateData.approvedBy = null
+      updateData.implementedDate = null
+    } else if (newStatus === 'SUBMITTED') {
       updateData.approvedDate = null
       updateData.approvedBy = null
       updateData.implementedDate = null

@@ -1,5 +1,5 @@
--- AlterEnum: Add DRAFT status to ChangeStatus enum (before existing values)
-ALTER TYPE "ChangeStatus" ADD VALUE 'DRAFT';
+-- AlterEnum: Add DRAFT status to ChangeStatus enum (before SUBMITTED)
+ALTER TYPE "ChangeStatus" ADD VALUE 'DRAFT' BEFORE 'SUBMITTED';
 
 -- AlterTable: Add new columns to ChangeOrder table
 ALTER TABLE "ChangeOrder" ADD COLUMN "scopeImpact" TEXT;
