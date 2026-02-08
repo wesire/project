@@ -1,11 +1,13 @@
 import { test, expect } from '@playwright/test';
 
+const API_PROJECTS_ENDPOINT = '/api/projects';
+
 test.describe('Authentication Token and Cookie Support', () => {
   test('should accept Bearer token in Authorization header', async ({ request }) => {
     // This test verifies that the API accepts Bearer tokens
     // Note: This will fail with 401 for an invalid token, but that's expected
     // The key is that it should not reject it before verifying
-    const response = await request.get('/api/projects', {
+    const response = await request.get(API_PROJECTS_ENDPOINT, {
       headers: {
         'Authorization': 'Bearer invalid-token-for-testing'
       }
@@ -29,7 +31,7 @@ test.describe('Authentication Token and Cookie Support', () => {
     ]);
 
     // Navigate to trigger API call with cookie
-    const response = await page.request.get('http://localhost:3000/api/projects');
+    const response = await page.request.get(`http://localhost:3000${API_PROJECTS_ENDPOINT}`);
     
     // Should return 401 for invalid token, not missing token error
     expect(response.status()).toBe(401);
@@ -41,7 +43,7 @@ test.describe('Authentication Token and Cookie Support', () => {
     // Clear any cookies
     await context.clearCookies();
     
-    const response = await request.get('/api/projects');
+    const response = await request.get(API_PROJECTS_ENDPOINT);
     
     // Should return 401 with "No authentication token provided"
     expect(response.status()).toBe(401);
@@ -61,7 +63,7 @@ test.describe('Authentication Token and Cookie Support', () => {
     ]);
 
     // Make request with Bearer token
-    const response = await request.get('/api/projects', {
+    const response = await request.get(API_PROJECTS_ENDPOINT, {
       headers: {
         'Authorization': 'Bearer bearer-token'
       }
