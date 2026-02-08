@@ -1,60 +1,47 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { apiFetch } from '@/lib/api-client'
+
+interface Cashflow {
+  id: string
+  date: string
+  type: 'INFLOW' | 'OUTFLOW'
+  category: string
+  description: string
+  forecast: number
+  actual: number | null
+  variance: number
+}
 
 export default function CashflowPage() {
-  const cashflows = [
-    {
-      id: '1',
-      date: '2024-01-31',
-      type: 'OUTFLOW',
-      category: 'Labour',
-      description: 'Monthly payroll',
-      forecast: 250000,
-      actual: 248000,
-      variance: -2000,
-    },
-    {
-      id: '2',
-      date: '2024-01-31',
-      type: 'OUTFLOW',
-      category: 'Materials',
-      description: 'Concrete and steel',
-      forecast: 180000,
-      actual: 195000,
-      variance: 15000,
-    },
-    {
-      id: '3',
-      date: '2024-02-15',
-      type: 'INFLOW',
-      category: 'Payment',
-      description: 'Client milestone payment',
-      forecast: 500000,
-      actual: 500000,
-      variance: 0,
-    },
-    {
-      id: '4',
-      date: '2024-02-28',
-      type: 'OUTFLOW',
-      category: 'Equipment',
-      description: 'Crane rental',
-      forecast: 45000,
-      actual: 42000,
-      variance: -3000,
-    },
-    {
-      id: '5',
-      date: '2024-03-10',
-      type: 'OUTFLOW',
-      category: 'Subcontractor',
-      description: 'Electrical contractor',
-      forecast: 120000,
-      actual: null,
-      variance: 0,
-    },
-  ]
+  const [cashflows, setCashflows] = useState<Cashflow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetchCashflows()
+  }, [])
+
+  const fetchCashflows = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const response = await apiFetch('/api/cashflows')
+      if (!response.ok) {
+        throw new Error(`Failed to fetch cashflows: ${response.statusText}`)
+      }
+      // API returns paginated response: { data: Cashflow[], total: number, page: number, perPage: number }
+      const data = await response.json()
+      setCashflows(data.data || [])
+    } catch (err) {
+      console.error('Error fetching cashflows:', err)
+      setError(err instanceof Error ? err.message : 'Failed to load cashflows. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const formatCurrency = (amount: number | null) => {
     if (amount === null) return 'Pending'
@@ -79,6 +66,75 @@ export default function CashflowPage() {
   const totalActualOutflow = cashflows
     .filter(c => c.type === 'OUTFLOW' && c.actual !== null)
     .reduce((sum, c) => sum + (c.actual || 0), 0)
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <header className="bg-green-600 text-white py-6 shadow-lg">
+          <div className="container mx-auto px-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <h1 className="text-3xl font-bold">Cashflow Management</h1>
+                <p className="text-green-100 mt-1">Forecast vs actual financial tracking</p>
+              </div>
+              <Link href="/" className="btn bg-green-700 hover:bg-green-800 text-white">
+                ← Home
+              </Link>
+            </div>
+          </div>
+        </header>
+        <main className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+              <p className="text-gray-600 text-lg">Loading cashflow data...</p>
+            </div>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <header className="bg-green-600 text-white py-6 shadow-lg">
+          <div className="container mx-auto px-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <h1 className="text-3xl font-bold">Cashflow Management</h1>
+                <p className="text-green-100 mt-1">Forecast vs actual financial tracking</p>
+              </div>
+              <Link href="/" className="btn bg-green-700 hover:bg-green-800 text-white">
+                ← Home
+              </Link>
+            </div>
+          </div>
+        </header>
+        <main className="container mx-auto px-4 py-8">
+          <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded-lg shadow-md max-w-2xl mx-auto">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <svg className="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="ml-3 flex-1">
+                <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Cashflows</h3>
+                <p className="text-red-700 mb-4">{error}</p>
+                <button
+                  onClick={fetchCashflows}
+                  className="btn bg-red-600 hover:bg-red-700 text-white"
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
