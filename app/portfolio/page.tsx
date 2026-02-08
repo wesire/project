@@ -85,8 +85,11 @@ export default function PortfolioDashboard() {
       setLoading(true)
       setError(null)
       
-      // For development, we'll use mock token or handle auth later
-      const token = localStorage.getItem('authToken') || 'dev-token'
+      const token = localStorage.getItem('authToken')
+      
+      if (!token) {
+        throw new Error('Authentication required. Please log in.')
+      }
       
       const response = await fetch('/api/portfolio/dashboard', {
         headers: {

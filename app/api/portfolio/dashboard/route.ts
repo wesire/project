@@ -238,22 +238,25 @@ export async function GET(request: NextRequest) {
     .slice(0, 10)
 
     // Generate variance data for the last 6 months
+    // NOTE: This is a simplified calculation based on current portfolio metrics
+    // In production, this should be calculated from historical data snapshots
     const varianceData = []
     const now = new Date()
+    const currentBudgetVariance = totalBudget - totalActual
+    const currentScheduleVariance = totalEarnedValue - totalPlannedValue
+    
     for (let i = 5; i >= 0; i--) {
       const month = new Date(now.getFullYear(), now.getMonth() - i, 1)
       const monthName = month.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
       
-      // Calculate budget variance (simplified)
-      const budgetVariance = totalBudget - totalActual
-      
-      // Calculate schedule variance (simplified)
-      const scheduleVariance = totalEarnedValue - totalPlannedValue
+      // Extrapolate historical trend based on current variance
+      // This assumes linear progression - replace with actual historical data when available
+      const progressionFactor = (6 - i) / 6
       
       varianceData.push({
         month: monthName,
-        budgetVariance: Math.round(budgetVariance * (1 - (i * 0.1))), // Simulate trend
-        scheduleVariance: Math.round(scheduleVariance * (1 - (i * 0.1))), // Simulate trend
+        budgetVariance: Math.round(currentBudgetVariance * progressionFactor),
+        scheduleVariance: Math.round(currentScheduleVariance * progressionFactor),
       })
     }
 
