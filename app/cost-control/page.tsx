@@ -99,6 +99,7 @@ export default function CostControlPage() {
     if (selectedProject) {
       fetchAnalytics();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProject, period]);
 
   const fetchProjects = async () => {
