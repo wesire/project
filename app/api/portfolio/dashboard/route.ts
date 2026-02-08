@@ -42,7 +42,7 @@ interface PortfolioDashboardMetrics {
     status: string
     costImpact: number
     timeImpact: number
-    submittedDate: string
+    submittedDate: string | null
   }>
   upcomingMilestones: Array<{
     id: string
@@ -217,7 +217,7 @@ export async function GET(request: NextRequest) {
         status: change.status,
         costImpact: change.costImpact,
         timeImpact: change.timeImpact,
-        submittedDate: change.submittedDate.toISOString(),
+        submittedDate: change.submittedDate?.toISOString() || null,
       }))
     )
     .slice(0, 10)
