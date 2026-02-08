@@ -100,6 +100,12 @@ export async function PUT(
     if (validatedData.costPerHour !== undefined) updateData.costPerHour = validatedData.costPerHour
     if (validatedData.availability !== undefined) updateData.availability = validatedData.availability
     if (validatedData.skills !== undefined) updateData.skills = validatedData.skills
+    if (validatedData.standardRate !== undefined) updateData.standardRate = validatedData.standardRate
+    if (validatedData.overtimeRate !== undefined) updateData.overtimeRate = validatedData.overtimeRate
+    if (validatedData.weekendRate !== undefined) updateData.weekendRate = validatedData.weekendRate
+    if (validatedData.currency !== undefined) updateData.currency = validatedData.currency
+    if (validatedData.maxHoursPerDay !== undefined) updateData.maxHoursPerDay = validatedData.maxHoursPerDay
+    if (validatedData.maxHoursPerWeek !== undefined) updateData.maxHoursPerWeek = validatedData.maxHoursPerWeek
     
     const resource = await prisma.resource.update({
       where: { id: id },

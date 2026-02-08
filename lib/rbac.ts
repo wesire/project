@@ -50,6 +50,14 @@ export const rolePermissions: Record<UserRole, string[]> = {
     'task:read',
     'task:update',
     'task:delete',
+    'resource:create',
+    'resource:read',
+    'resource:update',
+    'resource:delete',
+    'allocation:create',
+    'allocation:read',
+    'allocation:update',
+    'allocation:delete',
     'settings:manage'
   ],
   [UserRole.PM]: [
@@ -63,12 +71,21 @@ export const rolePermissions: Record<UserRole, string[]> = {
     'task:read',
     'task:update',
     'task:delete',
-    'resource:allocate'
+    'resource:create',
+    'resource:read',
+    'resource:update',
+    'resource:allocate',
+    'allocation:create',
+    'allocation:read',
+    'allocation:update',
+    'allocation:delete'
   ],
   [UserRole.QS]: [
     'project:read',
     'risk:read',
     'task:read',
+    'resource:read',
+    'allocation:read',
     'cashflow:create',
     'cashflow:read',
     'cashflow:update',
@@ -80,6 +97,8 @@ export const rolePermissions: Record<UserRole, string[]> = {
     'project:read',
     'task:read',
     'task:update',
+    'resource:read',
+    'allocation:read',
     'issue:create',
     'issue:read',
     'issue:update',
@@ -90,6 +109,8 @@ export const rolePermissions: Record<UserRole, string[]> = {
     'project:read',
     'risk:read',
     'task:read',
+    'resource:read',
+    'allocation:read',
     'issue:read',
     'rfi:read'
   ]
