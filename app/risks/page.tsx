@@ -277,19 +277,30 @@ export default function RiskRegister() {
         throw new Error('Export failed')
       }
       
+      // Extract filename from Content-Disposition header or use default
+      let filename = `risk-register-${new Date().toISOString().split('T')[0]}.${format}`
+      const contentDisposition = response.headers.get('Content-Disposition')
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/)
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1]
+        }
+      }
+      
       // Create blob and download
       const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = `risk-register-${new Date().toISOString().split('T')[0]}.${format}`
+      link.download = filename
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
       window.URL.revokeObjectURL(url)
     } catch (error) {
       console.error('Export error:', error)
-      alert('Failed to export risk register. Please try again.')
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      alert(`Failed to export risk register: ${errorMessage}. Please try again.`)
     }
   }
 
