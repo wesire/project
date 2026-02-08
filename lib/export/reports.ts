@@ -440,7 +440,7 @@ export async function generateDataPackXLSX(data: DataPackData): Promise<Buffer> 
     fgColor: { argb: 'FF8B5CF6' },
   }
 
-  data.resources.forEach((resource, index) => {
+  data.resources.forEach((resource) => {
     const row = resourcesSheet.addRow({
       resourceName: resource.resourceName,
       resourceType: resource.resourceType,
