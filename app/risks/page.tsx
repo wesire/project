@@ -262,8 +262,46 @@ export default function RiskRegister() {
   }
 
   // Handle export
-  const handleExport = (format: 'csv' | 'xlsx') => {
-    window.open(`/api/risks/export?format=${format}`, '_blank')
+  const handleExport = async (format: 'csv' | 'xlsx') => {
+    try {
+      // Build query parameters with active filters
+      const params = new URLSearchParams({ format })
+      if (filterStatus !== 'ALL') params.append('status', filterStatus)
+      if (filterOwner !== 'ALL') params.append('owner', filterOwner)
+      if (filterCategory !== 'ALL') params.append('category', filterCategory)
+      
+      // Fetch the file
+      const response = await fetch(`/api/risks/export?${params.toString()}`)
+      
+      if (!response.ok) {
+        throw new Error('Export failed')
+      }
+      
+      // Extract filename from Content-Disposition header or use default
+      let filename = `risk-register-${new Date().toISOString().split('T')[0]}.${format}`
+      const contentDisposition = response.headers.get('Content-Disposition')
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/)
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1]
+        }
+      }
+      
+      // Create blob and download
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Export error:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      alert(`Failed to export risk register: ${errorMessage}. Please try again.`)
+    }
   }
 
   // Create heatmap data
