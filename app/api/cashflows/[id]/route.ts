@@ -6,21 +6,17 @@ import { requireProjectPermission } from '@/lib/project-permissions'
 import { AuthenticationError, AuthorizationError, ValidationError } from '@/lib/errors'
 import { UserRole } from '@/lib/types'
 
-interface RouteParams {
-  params: {
-    id: string
-  }
-}
 
 export async function GET(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const user = await requirePermission(request, 'cashflow:read')
     
     const cashflow = await prisma.cashflow.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: {
         project: {
           select: {
@@ -74,14 +70,15 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const user = await requirePermission(request, 'cashflow:update')
     
     // Check if cashflow exists
     const existingCashflow = await prisma.cashflow.findUnique({
-      where: { id: params.id }
+      where: { id: id }
     })
     
     if (!existingCashflow) {
@@ -117,7 +114,7 @@ export async function PUT(
     updateData.variance = actual !== null ? actual - forecast : 0
     
     const cashflow = await prisma.cashflow.update({
-      where: { id: params.id },
+      where: { id: id },
       data: updateData,
       include: {
         project: {
@@ -179,14 +176,15 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const user = await requirePermission(request, 'cashflow:delete')
     
     // Check if cashflow exists
     const existingCashflow = await prisma.cashflow.findUnique({
-      where: { id: params.id }
+      where: { id: id }
     })
     
     if (!existingCashflow) {
@@ -206,7 +204,7 @@ export async function DELETE(
     
     // Delete cashflow
     await prisma.cashflow.delete({
-      where: { id: params.id }
+      where: { id: id }
     })
     
     // Create audit log
@@ -216,7 +214,7 @@ export async function DELETE(
         userId: user.userId,
         action: 'DELETE',
         entityType: 'Cashflow',
-        entityId: params.id,
+        entityId: id,
         changes: {
           deleted: existingCashflow,
         },

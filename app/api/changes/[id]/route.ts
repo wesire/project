@@ -6,21 +6,17 @@ import { requireProjectPermission } from '@/lib/project-permissions'
 import { AuthenticationError, AuthorizationError, ValidationError } from '@/lib/errors'
 import { UserRole } from '@/lib/types'
 
-interface RouteParams {
-  params: {
-    id: string
-  }
-}
 
 export async function GET(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const user = await requirePermission(request, 'change:read')
     
     const change = await prisma.changeOrder.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: {
         project: {
           select: {
@@ -98,14 +94,15 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const user = await requirePermission(request, 'change:update')
     
     // Check if change order exists
     const existingChange = await prisma.changeOrder.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: {
         tasks: true,
         budgetLines: true,
@@ -141,7 +138,7 @@ export async function PUT(
     if (validatedData.timeImpact !== undefined) updateData.timeImpact = validatedData.timeImpact
     
     const change = await prisma.changeOrder.update({
-      where: { id: params.id },
+      where: { id: id },
       data: updateData,
       include: {
         project: {
@@ -173,7 +170,7 @@ export async function PUT(
       // Remove old task associations
       await prisma.task.updateMany({
         where: {
-          changeOrderId: params.id,
+          changeOrderId: id,
         },
         data: {
           changeOrderId: null,
@@ -188,7 +185,7 @@ export async function PUT(
             projectId: existingChange.projectId,
           },
           data: {
-            changeOrderId: params.id,
+            changeOrderId: id,
           },
         })
       }
@@ -199,7 +196,7 @@ export async function PUT(
       // Remove old budget line associations
       await prisma.budgetLine.updateMany({
         where: {
-          changeOrderId: params.id,
+          changeOrderId: id,
         },
         data: {
           changeOrderId: null,
@@ -214,7 +211,7 @@ export async function PUT(
             projectId: existingChange.projectId,
           },
           data: {
-            changeOrderId: params.id,
+            changeOrderId: id,
           },
         })
       }
@@ -222,7 +219,7 @@ export async function PUT(
 
     // Fetch updated change order with all relations
     const updatedChange = await prisma.changeOrder.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: {
         project: {
           select: {
@@ -297,14 +294,15 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const user = await requirePermission(request, 'change:delete')
     
     // Check if change order exists
     const existingChange = await prisma.changeOrder.findUnique({
-      where: { id: params.id }
+      where: { id: id }
     })
     
     if (!existingChange) {
@@ -324,7 +322,7 @@ export async function DELETE(
     
     // Delete change order
     await prisma.changeOrder.delete({
-      where: { id: params.id }
+      where: { id: id }
     })
     
     // Create audit log
@@ -334,7 +332,7 @@ export async function DELETE(
         userId: user.userId,
         action: 'DELETE',
         entityType: 'ChangeOrder',
-        entityId: params.id,
+        entityId: id,
         changes: {
           deleted: existingChange,
         },

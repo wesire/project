@@ -6,11 +6,6 @@ import { requireProjectPermission } from '@/lib/project-permissions'
 import { AuthenticationError, AuthorizationError, ValidationError } from '@/lib/errors'
 import { UserRole } from '@/lib/types'
 
-interface RouteParams {
-  params: {
-    id: string
-  }
-}
 
 /**
  * Update change order status (workflow transitions)
@@ -18,14 +13,15 @@ interface RouteParams {
  */
 export async function POST(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const user = await requirePermission(request, 'change:update')
     
     // Check if change order exists
     const existingChange = await prisma.changeOrder.findUnique({
-      where: { id: params.id }
+      where: { id: id }
     })
     
     if (!existingChange) {
@@ -109,7 +105,7 @@ export async function POST(
     }
     
     const change = await prisma.changeOrder.update({
-      where: { id: params.id },
+      where: { id: id },
       data: updateData,
       include: {
         project: {

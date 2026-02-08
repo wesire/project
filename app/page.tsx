@@ -42,6 +42,16 @@ export default function Home() {
             <p className="text-gray-600">Task management and Gantt charts</p>
           </Link>
 
+          <Link href="/schedule" className="card hover:shadow-lg transition-shadow bg-gradient-to-br from-indigo-50 to-purple-100 border-2 border-indigo-400">
+            <h2 className="text-xl font-bold mb-2 text-indigo-700">📅 Schedule</h2>
+            <p className="text-gray-700">Interactive Gantt with critical path & milestones</p>
+          </Link>
+
+          <Link href="/sprints" className="card hover:shadow-lg transition-shadow bg-gradient-to-br from-purple-50 to-pink-100 border-2 border-purple-400">
+            <h2 className="text-xl font-bold mb-2 text-purple-700">🎯 Sprint Board</h2>
+            <p className="text-gray-700">Kanban board with burndown & velocity charts</p>
+          </Link>
+
           <Link href="/resources" className="card hover:shadow-lg transition-shadow">
             <h2 className="text-xl font-bold mb-2 text-purple-600">👥 Resources</h2>
             <p className="text-gray-600">Allocation and utilization tracking</p>
@@ -110,6 +120,18 @@ export default function Home() {
             <li className="flex items-start">
               <span className="text-green-600 mr-2">✓</span>
               <span>Gantt chart timeline views</span>
+            </li>
+            <li className="flex items-start">
+              <span className="text-green-600 mr-2">✓</span>
+              <span>Critical path analysis</span>
+            </li>
+            <li className="flex items-start">
+              <span className="text-green-600 mr-2">✓</span>
+              <span>Sprint burndown & velocity tracking</span>
+            </li>
+            <li className="flex items-start">
+              <span className="text-green-600 mr-2">✓</span>
+              <span>Baseline vs current date variance</span>
             </li>
             <li className="flex items-start">
               <span className="text-green-600 mr-2">✓</span>

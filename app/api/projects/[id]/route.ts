@@ -6,24 +6,20 @@ import { requireProjectAccess } from '@/lib/project-permissions'
 import { AuthenticationError, AuthorizationError, ValidationError } from '@/lib/errors'
 import { UserRole } from '@/lib/types'
 
-interface RouteParams {
-  params: {
-    id: string
-  }
-}
 
 export async function GET(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const user = await requirePermission(request, 'project:read')
     
     // Check project access
-    await requireProjectAccess(user.userId, user.role as UserRole, params.id, 'view project details')
+    await requireProjectAccess(user.userId, user.role as UserRole, id, 'view project details')
     
     const project = await prisma.project.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: {
         createdBy: {
           select: {
@@ -92,17 +88,18 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const user = await requirePermission(request, 'project:update')
     
     // Check project access
-    await requireProjectAccess(user.userId, user.role as UserRole, params.id, 'update project')
+    await requireProjectAccess(user.userId, user.role as UserRole, id, 'update project')
     
     // Check if project exists
     const existingProject = await prisma.project.findUnique({
-      where: { id: params.id }
+      where: { id: id }
     })
     
     if (!existingProject) {
@@ -129,7 +126,7 @@ export async function PUT(
     if (validatedData.client !== undefined) updateData.client = validatedData.client
     
     const project = await prisma.project.update({
-      where: { id: params.id },
+      where: { id: id },
       data: updateData,
       include: {
         createdBy: {
@@ -191,17 +188,18 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const user = await requirePermission(request, 'project:delete')
     
     // Check project access
-    await requireProjectAccess(user.userId, user.role as UserRole, params.id, 'delete project')
+    await requireProjectAccess(user.userId, user.role as UserRole, id, 'delete project')
     
     // Check if project exists
     const existingProject = await prisma.project.findUnique({
-      where: { id: params.id }
+      where: { id: id }
     })
     
     if (!existingProject) {
@@ -213,7 +211,7 @@ export async function DELETE(
     
     // Delete project (cascade will handle related records)
     await prisma.project.delete({
-      where: { id: params.id }
+      where: { id: id }
     })
     
     // Create audit log (not tied to project since it's deleted)
@@ -222,7 +220,7 @@ export async function DELETE(
         userId: user.userId,
         action: 'DELETE',
         entityType: 'Project',
-        entityId: params.id,
+        entityId: id,
         changes: {
           deleted: existingProject,
         },

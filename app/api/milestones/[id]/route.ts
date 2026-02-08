@@ -1,22 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requirePermission } from '@/lib/middleware'
-import { updateSprintSchema, validateData } from '@/lib/validation'
+import { updateMilestoneSchema, validateData } from '@/lib/validation'
 import { requireProjectPermission } from '@/lib/project-permissions'
-import { AuthenticationError, AuthorizationError, ValidationError } from '@/lib/errors'
+import { AuthenticationError, ValidationError, NotFoundError } from '@/lib/errors'
 import { UserRole } from '@/lib/types'
-
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await requirePermission(request, 'milestone:read')
     const { id } = await params
-    const user = await requirePermission(request, 'sprint:read')
-    
-    const sprint = await prisma.sprint.findUnique({
-      where: { id: id },
+
+    const milestone = await prisma.milestone.findUnique({
+      where: { id },
       include: {
         project: {
           select: {
@@ -26,37 +25,35 @@ export async function GET(
           },
         },
         tasks: {
-          include: {
-            assignedTo: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
+          select: {
+            id: true,
+            taskNumber: true,
+            title: true,
+            status: true,
+            progress: true,
           },
         },
       },
     })
-    
-    if (!sprint) {
+
+    if (!milestone) {
       return NextResponse.json(
-        { error: 'Sprint not found' },
+        { error: 'Milestone not found' },
         { status: 404 }
       )
     }
-    
+
     // Check project access
     await requireProjectPermission(
       user.userId,
       user.role as UserRole,
-      sprint.projectId,
-      'sprint:read'
+      milestone.projectId,
+      'milestone:read'
     )
-    
-    return NextResponse.json(sprint)
+
+    return NextResponse.json(milestone)
   } catch (error) {
-    console.error('Error fetching sprint:', error)
+    console.error('Error fetching milestone:', error)
     
     if (error instanceof AuthenticationError) {
       return NextResponse.json(
@@ -65,10 +62,10 @@ export async function GET(
       )
     }
     
-    if (error instanceof AuthorizationError) {
+    if (error instanceof NotFoundError) {
       return NextResponse.json(
         { error: error.message },
-        { status: 403 }
+        { status: 404 }
       )
     }
     
@@ -84,42 +81,43 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await requirePermission(request, 'milestone:update')
     const { id } = await params
-    const user = await requirePermission(request, 'sprint:update')
-    
-    // Check if sprint exists
-    const existingSprint = await prisma.sprint.findUnique({
-      where: { id: id }
+    const body = await request.json()
+
+    // Validate request body
+    const validatedData = validateData(updateMilestoneSchema, body)
+
+    // Get existing milestone
+    const existing = await prisma.milestone.findUnique({
+      where: { id },
     })
-    
-    if (!existingSprint) {
+
+    if (!existing) {
       return NextResponse.json(
-        { error: 'Sprint not found' },
+        { error: 'Milestone not found' },
         { status: 404 }
       )
     }
-    
+
     // Check project access
     await requireProjectPermission(
       user.userId,
       user.role as UserRole,
-      existingSprint.projectId,
-      'sprint:update'
+      existing.projectId,
+      'milestone:update'
     )
-    
-    const body = await request.json()
-    const validatedData = validateData(updateSprintSchema, body)
-    
-    // Build update data
-    const updateData: Record<string, unknown> = {}
-    if (validatedData.name !== undefined) updateData.name = validatedData.name
-    if (validatedData.goal !== undefined) updateData.goal = validatedData.goal
-    if (validatedData.startDate !== undefined) updateData.startDate = new Date(validatedData.startDate)
-    if (validatedData.endDate !== undefined) updateData.endDate = new Date(validatedData.endDate)
-    
-    const sprint = await prisma.sprint.update({
-      where: { id: id },
-      data: updateData,
+
+    const milestone = await prisma.milestone.update({
+      where: { id },
+      data: {
+        name: validatedData.name,
+        description: validatedData.description,
+        dueDate: validatedData.dueDate ? new Date(validatedData.dueDate) : undefined,
+        baselineDueDate: validatedData.baselineDueDate ? new Date(validatedData.baselineDueDate) : undefined,
+        status: validatedData.status,
+        owner: validatedData.owner,
+      },
       include: {
         project: {
           select: {
@@ -135,37 +133,30 @@ export async function PUT(
         },
       },
     })
-    
+
     // Create audit log
     await prisma.auditLog.create({
       data: {
-        projectId: sprint.projectId,
+        projectId: milestone.projectId,
         userId: user.userId,
         action: 'UPDATE',
-        entityType: 'Sprint',
-        entityId: sprint.id,
+        entityType: 'Milestone',
+        entityId: milestone.id,
         changes: {
-          before: existingSprint,
-          after: sprint,
+          before: existing,
+          after: milestone,
         },
       },
     })
-    
-    return NextResponse.json(sprint)
+
+    return NextResponse.json(milestone)
   } catch (error) {
-    console.error('Error updating sprint:', error)
+    console.error('Error updating milestone:', error)
     
     if (error instanceof AuthenticationError) {
       return NextResponse.json(
         { error: error.message },
         { status: 401 }
-      )
-    }
-    
-    if (error instanceof AuthorizationError) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 403 }
       )
     }
     
@@ -188,63 +179,54 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await requirePermission(request, 'milestone:delete')
     const { id } = await params
-    const user = await requirePermission(request, 'sprint:delete')
-    
-    // Check if sprint exists
-    const existingSprint = await prisma.sprint.findUnique({
-      where: { id: id }
+
+    const milestone = await prisma.milestone.findUnique({
+      where: { id },
     })
-    
-    if (!existingSprint) {
+
+    if (!milestone) {
       return NextResponse.json(
-        { error: 'Sprint not found' },
+        { error: 'Milestone not found' },
         { status: 404 }
       )
     }
-    
+
     // Check project access
     await requireProjectPermission(
       user.userId,
       user.role as UserRole,
-      existingSprint.projectId,
-      'sprint:delete'
+      milestone.projectId,
+      'milestone:delete'
     )
-    
-    // Delete sprint
-    await prisma.sprint.delete({
-      where: { id: id }
+
+    await prisma.milestone.delete({
+      where: { id },
     })
-    
+
     // Create audit log
     await prisma.auditLog.create({
       data: {
-        projectId: existingSprint.projectId,
+        projectId: milestone.projectId,
         userId: user.userId,
         action: 'DELETE',
-        entityType: 'Sprint',
-        entityId: id,
+        entityType: 'Milestone',
+        entityId: milestone.id,
         changes: {
-          deleted: existingSprint,
+          deleted: milestone,
         },
       },
     })
-    
-    return NextResponse.json({ message: 'Sprint deleted successfully' })
+
+    return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Error deleting sprint:', error)
+    console.error('Error deleting milestone:', error)
     
     if (error instanceof AuthenticationError) {
       return NextResponse.json(
         { error: error.message },
         { status: 401 }
-      )
-    }
-    
-    if (error instanceof AuthorizationError) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 403 }
       )
     }
     
