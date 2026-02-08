@@ -77,14 +77,10 @@ export default function PortfolioDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [authError, setAuthError] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
-    checkAuthAndFetchData()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const checkAuthAndFetchData = async () => {
     const token = localStorage.getItem('authToken')
     
     if (!token) {
@@ -94,18 +90,22 @@ export default function PortfolioDashboard() {
     }
     
     setIsAuthenticated(true)
-    await fetchDashboardData()
-  }
+    fetchDashboardData()
+    // Only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const fetchDashboardData = async () => {
     try {
       setLoading(true)
       setError(null)
+      setAuthError(false)
       
       const token = localStorage.getItem('authToken')
       
       if (!token) {
         setIsAuthenticated(false)
+        setAuthError(true)
         setLoading(false)
         return
       }
@@ -120,6 +120,7 @@ export default function PortfolioDashboard() {
         // Token is invalid or expired
         localStorage.removeItem('authToken')
         setIsAuthenticated(false)
+        setAuthError(true)
         setError('Your session has expired. Please log in again.')
         setLoading(false)
         return
@@ -228,7 +229,7 @@ export default function PortfolioDashboard() {
             <h2 className="text-xl font-bold text-gray-800 mb-2">Error Loading Dashboard</h2>
             <p className="text-gray-600 mb-4">{error}</p>
             <div className="space-y-3">
-              {error.includes('session has expired') || error.includes('Authentication') ? (
+              {authError ? (
                 <button 
                   onClick={handleLogin}
                   className="btn btn-primary w-full"

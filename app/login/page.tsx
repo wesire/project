@@ -36,7 +36,15 @@ export default function LoginPage() {
         localStorage.setItem('authToken', data.data.token)
         
         // Redirect to portfolio or the page they came from
-        const returnUrl = new URLSearchParams(window.location.search).get('returnUrl') || '/portfolio'
+        // Validate returnUrl to prevent open redirect attacks
+        const returnUrlParam = new URLSearchParams(window.location.search).get('returnUrl')
+        let returnUrl = '/portfolio'
+        
+        // Only use returnUrl if it's a relative path (starts with /)
+        if (returnUrlParam && returnUrlParam.startsWith('/') && !returnUrlParam.startsWith('//')) {
+          returnUrl = returnUrlParam
+        }
+        
         router.push(returnUrl)
       } else {
         throw new Error('No token received')
