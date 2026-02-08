@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { apiFetch } from '@/lib/api-client'
 
 interface Cashflow {
@@ -19,10 +20,34 @@ export default function CashflowPage() {
   const [cashflows, setCashflows] = useState<Cashflow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [authLoading, setAuthLoading] = useState(true)
+  const router = useRouter()
 
   useEffect(() => {
+    const token = localStorage.getItem('authToken')
+    
+    if (!token) {
+      setIsAuthenticated(false)
+      setAuthLoading(false)
+      setLoading(false)
+      return
+    }
+    
+    setIsAuthenticated(true)
+    setAuthLoading(false)
     fetchCashflows()
   }, [])
+
+  const handleLogin = () => {
+    router.push('/login?returnUrl=/cashflow')
+  }
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchCashflows()
+    }
+  }, [isAuthenticated])
 
   const fetchCashflows = async () => {
     setLoading(true)
@@ -66,6 +91,47 @@ export default function CashflowPage() {
   const totalActualOutflow = cashflows
     .filter(c => c.type === 'OUTFLOW' && c.actual !== null)
     .reduce((sum, c) => sum + (c.actual || 0), 0)
+
+  if (authLoading || loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-green-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="card max-w-md">
+          <div className="text-center">
+            <div className="text-green-600 text-5xl mb-4">🔒</div>
+            <h2 className="text-xl font-bold text-gray-800 mb-2">Authentication Required</h2>
+            <p className="text-gray-600 mb-6">
+              Please log in to access cashflow management.
+            </p>
+            <div className="space-y-3">
+              <button 
+                onClick={handleLogin}
+                className="btn btn-primary w-full"
+              >
+                Sign In
+              </button>
+              <Link 
+                href="/"
+                className="btn bg-gray-100 hover:bg-gray-200 text-gray-700 w-full inline-block text-center"
+              >
+                ← Back to Home
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (loading) {
     return (

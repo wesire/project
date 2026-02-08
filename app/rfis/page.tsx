@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
 interface RFI {
   id: string
@@ -28,10 +29,34 @@ export default function RFIsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<string>('ALL')
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [authLoading, setAuthLoading] = useState(true)
+  const router = useRouter()
 
   useEffect(() => {
+    const token = localStorage.getItem('authToken')
+    
+    if (!token) {
+      setIsAuthenticated(false)
+      setAuthLoading(false)
+      setLoading(false)
+      return
+    }
+    
+    setIsAuthenticated(true)
+    setAuthLoading(false)
     fetchRFIs()
   }, [])
+
+  const handleLogin = () => {
+    router.push('/login?returnUrl=/rfis')
+  }
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchRFIs()
+    }
+  }, [isAuthenticated])
 
   const fetchRFIs = async () => {
     try {
@@ -63,6 +88,47 @@ export default function RFIsPage() {
   const filteredRFIs = statusFilter === 'ALL' 
     ? rfis 
     : rfis.filter(rfi => rfi.status === statusFilter)
+
+  if (authLoading || loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="card max-w-md">
+          <div className="text-center">
+            <div className="text-blue-600 text-5xl mb-4">🔒</div>
+            <h2 className="text-xl font-bold text-gray-800 mb-2">Authentication Required</h2>
+            <p className="text-gray-600 mb-6">
+              Please log in to access RFIs.
+            </p>
+            <div className="space-y-3">
+              <button 
+                onClick={handleLogin}
+                className="btn btn-primary w-full"
+              >
+                Sign In
+              </button>
+              <Link 
+                href="/"
+                className="btn bg-gray-100 hover:bg-gray-200 text-gray-700 w-full inline-block text-center"
+              >
+                ← Back to Home
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

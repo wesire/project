@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import toast, { Toaster } from 'react-hot-toast'
 
@@ -23,6 +24,27 @@ interface Risk {
 }
 
 export default function RiskRegister() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const router = useRouter()
+
+  useEffect(() => {
+    const token = localStorage.getItem('authToken')
+    
+    if (!token) {
+      setIsAuthenticated(false)
+      setLoading(false)
+      return
+    }
+    
+    setIsAuthenticated(true)
+    setLoading(false)
+  }, [])
+
+  const handleLogin = () => {
+    router.push('/login?returnUrl=/risks')
+  }
+
   const [risks, setRisks] = useState<Risk[]>([
     { 
       id: '1', 
@@ -348,6 +370,47 @@ export default function RiskRegister() {
         bgColor,
       })
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-red-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="card max-w-md">
+          <div className="text-center">
+            <div className="text-red-600 text-5xl mb-4">🔒</div>
+            <h2 className="text-xl font-bold text-gray-800 mb-2">Authentication Required</h2>
+            <p className="text-gray-600 mb-6">
+              Please log in to access the risk register.
+            </p>
+            <div className="space-y-3">
+              <button 
+                onClick={handleLogin}
+                className="btn btn-primary w-full"
+              >
+                Sign In
+              </button>
+              <Link 
+                href="/"
+                className="btn bg-gray-100 hover:bg-gray-200 text-gray-700 w-full inline-block text-center"
+              >
+                ← Back to Home
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
