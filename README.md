@@ -363,10 +363,11 @@ npm run test:report
 ```
 
 **Test Coverage:**
-- ✅ Portfolio auth guard (19 tests total)
-- ✅ Changes route navigation
-- ✅ Project register button navigation
-- ✅ Risk export download trigger
+- ✅ Portfolio auth guard (3 tests)
+- ✅ Changes route navigation (6 tests)
+- ✅ Project register button navigation (5 tests)
+- ✅ Risk export download trigger (5 tests)
+- **Total: 19 tests passing**
 
 See [TESTING.md](./TESTING.md) for detailed test documentation.
 
