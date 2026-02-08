@@ -5,6 +5,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import toast, { Toaster } from 'react-hot-toast'
+import { apiFetch } from '@/lib/api-client'
 
 interface Risk {
   id: string
@@ -302,7 +303,7 @@ export default function RiskRegister() {
       if (filterCategory !== 'ALL') params.append('category', filterCategory)
       
       // Fetch the file
-      const response = await fetch(`/api/risks/export?${params.toString()}`)
+      const response = await apiFetch(`/api/risks/export?${params.toString()}`)
       
       if (!response.ok) {
         throw new Error('Export failed')
