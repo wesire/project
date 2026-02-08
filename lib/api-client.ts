@@ -34,7 +34,9 @@ function getAuthToken(cookies?: string): string | null {
     )
     
     if (tokenCookie) {
-      return tokenCookie.split('=')[1]
+      // Handle cookies with '=' in the value (e.g., base64 tokens)
+      const equalsIndex = tokenCookie.indexOf('=')
+      return tokenCookie.substring(equalsIndex + 1)
     }
     
     return null
@@ -44,6 +46,7 @@ function getAuthToken(cookies?: string): string | null {
 /**
  * Handle 401 Unauthorized responses
  * Redirects to login page with return URL on client-side
+ * Throws error on server-side
  */
 function handle401Error(): never {
   if (isBrowser()) {
@@ -54,10 +57,14 @@ function handle401Error(): never {
     const currentPath = window.location.pathname + window.location.search
     const returnUrl = encodeURIComponent(currentPath)
     
-    // Redirect to login
+    // Redirect to login - this will navigate away, but we still throw to prevent further execution
     window.location.href = `/login?returnUrl=${returnUrl}`
+    
+    // Throw to prevent further code execution while redirect is pending
+    throw new Error('Unauthorized - redirecting to login')
   }
   
+  // Server-side: just throw an error
   throw new Error('Unauthorized')
 }
 
