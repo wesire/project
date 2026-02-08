@@ -6,21 +6,17 @@ import { requireProjectPermission } from '@/lib/project-permissions'
 import { AuthenticationError, AuthorizationError, ValidationError } from '@/lib/errors'
 import { UserRole } from '@/lib/types'
 
-interface RouteParams {
-  params: {
-    id: string
-  }
-}
 
 export async function GET(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const user = await requirePermission(request, 'risk:read')
     
     const risk = await prisma.risk.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: {
         project: {
           select: {
@@ -74,14 +70,15 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const user = await requirePermission(request, 'risk:update')
     
     // Check if risk exists
     const existingRisk = await prisma.risk.findUnique({
-      where: { id: params.id }
+      where: { id: id }
     })
     
     if (!existingRisk) {
@@ -120,7 +117,7 @@ export async function PUT(
     updateData.score = probability * impact
     
     const risk = await prisma.risk.update({
-      where: { id: params.id },
+      where: { id: id },
       data: updateData,
       include: {
         project: {
@@ -182,14 +179,15 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const user = await requirePermission(request, 'risk:delete')
     
     // Check if risk exists
     const existingRisk = await prisma.risk.findUnique({
-      where: { id: params.id }
+      where: { id: id }
     })
     
     if (!existingRisk) {
@@ -209,7 +207,7 @@ export async function DELETE(
     
     // Delete risk
     await prisma.risk.delete({
-      where: { id: params.id }
+      where: { id: id }
     })
     
     // Create audit log
@@ -219,7 +217,7 @@ export async function DELETE(
         userId: user.userId,
         action: 'DELETE',
         entityType: 'Risk',
-        entityId: params.id,
+        entityId: id,
         changes: {
           deleted: existingRisk,
         },

@@ -4,21 +4,17 @@ import { requirePermission } from '@/lib/middleware'
 import { updateResourceSchema, validateData } from '@/lib/validation'
 import { AuthenticationError, AuthorizationError, ValidationError } from '@/lib/errors'
 
-interface RouteParams {
-  params: {
-    id: string
-  }
-}
 
 export async function GET(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const _user = await requirePermission(request, 'resource:read')
     
     const resource = await prisma.resource.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: {
         allocations: {
           include: {
@@ -75,14 +71,15 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const user = await requirePermission(request, 'resource:update')
     
     // Check if resource exists
     const existingResource = await prisma.resource.findUnique({
-      where: { id: params.id }
+      where: { id: id }
     })
     
     if (!existingResource) {
@@ -105,7 +102,7 @@ export async function PUT(
     if (validatedData.skills !== undefined) updateData.skills = validatedData.skills
     
     const resource = await prisma.resource.update({
-      where: { id: params.id },
+      where: { id: id },
       data: updateData,
       include: {
         _count: {
@@ -164,14 +161,15 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const user = await requirePermission(request, 'resource:delete')
     
     // Check if resource exists
     const existingResource = await prisma.resource.findUnique({
-      where: { id: params.id }
+      where: { id: id }
     })
     
     if (!existingResource) {
@@ -183,7 +181,7 @@ export async function DELETE(
     
     // Delete resource
     await prisma.resource.delete({
-      where: { id: params.id }
+      where: { id: id }
     })
     
     // Create audit log (no projectId for resources)
@@ -192,7 +190,7 @@ export async function DELETE(
         userId: user.userId,
         action: 'DELETE',
         entityType: 'Resource',
-        entityId: params.id,
+        entityId: id,
         changes: {
           deleted: existingResource,
         },

@@ -6,21 +6,17 @@ import { requireProjectPermission } from '@/lib/project-permissions'
 import { AuthenticationError, AuthorizationError, ValidationError } from '@/lib/errors'
 import { UserRole } from '@/lib/types'
 
-interface RouteParams {
-  params: {
-    id: string
-  }
-}
 
 export async function GET(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const user = await requirePermission(request, 'task:read')
     
     const task = await prisma.task.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: {
         project: {
           select: {
@@ -100,14 +96,15 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const user = await requirePermission(request, 'task:update')
     
     // Check if task exists
     const existingTask = await prisma.task.findUnique({
-      where: { id: params.id }
+      where: { id: id }
     })
     
     if (!existingTask) {
@@ -143,7 +140,7 @@ export async function PUT(
     if (validatedData.sprintId !== undefined) updateData.sprintId = validatedData.sprintId
     
     const task = await prisma.task.update({
-      where: { id: params.id },
+      where: { id: id },
       data: updateData,
       include: {
         project: {
@@ -225,14 +222,15 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const user = await requirePermission(request, 'task:delete')
     
     // Check if task exists
     const existingTask = await prisma.task.findUnique({
-      where: { id: params.id }
+      where: { id: id }
     })
     
     if (!existingTask) {
@@ -252,7 +250,7 @@ export async function DELETE(
     
     // Delete task
     await prisma.task.delete({
-      where: { id: params.id }
+      where: { id: id }
     })
     
     // Create audit log
@@ -262,7 +260,7 @@ export async function DELETE(
         userId: user.userId,
         action: 'DELETE',
         entityType: 'Task',
-        entityId: params.id,
+        entityId: id,
         changes: {
           deleted: existingTask,
         },

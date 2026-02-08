@@ -6,21 +6,17 @@ import { requireProjectPermission } from '@/lib/project-permissions'
 import { AuthenticationError, AuthorizationError, ValidationError } from '@/lib/errors'
 import { UserRole } from '@/lib/types'
 
-interface RouteParams {
-  params: {
-    id: string
-  }
-}
 
 export async function GET(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const user = await requirePermission(request, 'sprint:read')
     
     const sprint = await prisma.sprint.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: {
         project: {
           select: {
@@ -85,14 +81,15 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const user = await requirePermission(request, 'sprint:update')
     
     // Check if sprint exists
     const existingSprint = await prisma.sprint.findUnique({
-      where: { id: params.id }
+      where: { id: id }
     })
     
     if (!existingSprint) {
@@ -121,7 +118,7 @@ export async function PUT(
     if (validatedData.endDate !== undefined) updateData.endDate = new Date(validatedData.endDate)
     
     const sprint = await prisma.sprint.update({
-      where: { id: params.id },
+      where: { id: id },
       data: updateData,
       include: {
         project: {
@@ -188,14 +185,15 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const user = await requirePermission(request, 'sprint:delete')
     
     // Check if sprint exists
     const existingSprint = await prisma.sprint.findUnique({
-      where: { id: params.id }
+      where: { id: id }
     })
     
     if (!existingSprint) {
@@ -215,7 +213,7 @@ export async function DELETE(
     
     // Delete sprint
     await prisma.sprint.delete({
-      where: { id: params.id }
+      where: { id: id }
     })
     
     // Create audit log
@@ -225,7 +223,7 @@ export async function DELETE(
         userId: user.userId,
         action: 'DELETE',
         entityType: 'Sprint',
-        entityId: params.id,
+        entityId: id,
         changes: {
           deleted: existingSprint,
         },

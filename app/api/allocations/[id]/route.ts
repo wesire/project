@@ -6,21 +6,16 @@ import { requireProjectPermission } from '@/lib/project-permissions'
 import { AuthenticationError, AuthorizationError, ValidationError } from '@/lib/errors'
 import { UserRole } from '@/lib/types'
 
-interface RouteParams {
-  params: {
-    id: string
-  }
-}
-
 export async function GET(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requirePermission(request, 'allocation:read')
+    const { id } = await params
     
     const allocation = await prisma.resourceAllocation.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         project: {
           select: {
@@ -88,14 +83,15 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requirePermission(request, 'allocation:update')
+    const { id } = await params
     
     // Check if allocation exists
     const existingAllocation = await prisma.resourceAllocation.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
     
     if (!existingAllocation) {
@@ -127,7 +123,7 @@ export async function PUT(
     if (validatedData.endDate !== undefined) updateData.endDate = new Date(validatedData.endDate)
     
     const allocation = await prisma.resourceAllocation.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       include: {
         project: {
@@ -203,14 +199,15 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requirePermission(request, 'allocation:delete')
+    const { id } = await params
     
     // Check if allocation exists
     const existingAllocation = await prisma.resourceAllocation.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
     
     if (!existingAllocation) {
@@ -230,7 +227,7 @@ export async function DELETE(
     
     // Delete allocation
     await prisma.resourceAllocation.delete({
-      where: { id: params.id }
+      where: { id }
     })
     
     // Create audit log
@@ -240,7 +237,7 @@ export async function DELETE(
         userId: user.userId,
         action: 'DELETE',
         entityType: 'ResourceAllocation',
-        entityId: params.id,
+        entityId: id,
         changes: {
           deleted: existingAllocation,
         },
