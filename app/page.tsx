@@ -57,9 +57,12 @@ export default function Home() {
             <p className="text-gray-600">Allocation and utilization tracking</p>
           </Link>
 
-          <Link href="/cashflow" className="card hover:shadow-lg transition-shadow">
-            <h2 className="text-xl font-bold mb-2 text-green-600">💰 Cashflow</h2>
-            <p className="text-gray-600">Forecast vs actual financial tracking</p>
+          <Link href="/cost-control" className="card hover:shadow-lg transition-shadow bg-gradient-to-br from-green-50 to-emerald-100 border-2 border-green-400">
+            <h2 className="text-xl font-bold mb-2 text-green-700">💰 Cashflow & Cost Control</h2>
+            <p className="text-gray-700">
+              <span className="block">Planned vs actual cashflow (weekly/monthly)</span>
+              <span className="block text-sm mt-1">S-curve, committed cost, EAC trend, margin alerts</span>
+            </p>
           </Link>
 
           <Link href="/issues" className="card hover:shadow-lg transition-shadow">
@@ -111,7 +114,19 @@ export default function Home() {
             </li>
             <li className="flex items-start">
               <span className="text-green-600 mr-2">✓</span>
-              <span>EAC (Estimate at Completion) calculations</span>
+              <span>EAC (Estimate at Completion) trend tracking</span>
+            </li>
+            <li className="flex items-start">
+              <span className="text-green-600 mr-2">✓</span>
+              <span>S-curve cashflow analysis</span>
+            </li>
+            <li className="flex items-start">
+              <span className="text-green-600 mr-2">✓</span>
+              <span>Committed cost monitoring</span>
+            </li>
+            <li className="flex items-start">
+              <span className="text-green-600 mr-2">✓</span>
+              <span>Margin threshold alerts</span>
             </li>
             <li className="flex items-start">
               <span className="text-green-600 mr-2">✓</span>

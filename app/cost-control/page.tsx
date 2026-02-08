@@ -1,7 +1,6 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
+import { useState, useEffect } from 'react';
 import {
   LineChart,
   Line,
@@ -15,515 +14,499 @@ import {
   ResponsiveContainer,
   Area,
   AreaChart,
-} from 'recharts'
+} from 'recharts';
+
+interface Project {
+  id: string;
+  name: string;
+  projectNumber: string;
+}
 
 interface CostAnalytics {
   project: {
-    id: string
-    name: string
-    projectNumber: string
-    budget: number
-    actualCost: number
-    currency: string
-  }
+    id: string;
+    name: string;
+    projectNumber: string;
+    budget: number;
+    actualCost: number;
+    currency: string;
+  };
   costSummary: {
-    budget: number
-    actualCost: number
-    committedCost: number
-    approvedVariations: number
-    totalBudget: number
-    eac: number
-    variance: number
-    margin: number
-    marginPercentage: number
-    marginThreshold: number
-  }
+    budget: number;
+    actualCost: number;
+    committedCost: number;
+    approvedVariations: number;
+    totalBudget: number;
+    eac: number;
+    variance: number;
+    margin: number;
+    marginPercentage: number;
+    marginThreshold: number;
+  };
   performanceIndices: {
-    cpi: number
-    spi: number
-  }
+    cpi: number;
+    spi: number;
+  };
   cashflow: {
-    period: string
+    period: string;
     aggregated: Array<{
-      period: string
-      forecastInflow: number
-      forecastOutflow: number
-      actualInflow: number
-      actualOutflow: number
-    }>
+      period: string;
+      forecastInflow: number;
+      forecastOutflow: number;
+      actualInflow: number;
+      actualOutflow: number;
+    }>;
     sCurve: Array<{
-      date: Date
-      cumulativeForecast: number
-      cumulativeActual: number | null
-    }>
-  }
+      date: string;
+      cumulativeForecast: number;
+      cumulativeActual: number;
+    }>;
+  };
   eacTrend: Array<{
-    id: string
-    eac: number
-    margin: number
-    marginPercentage: number
-    cpi: number
-    spi: number
-    recordedAt: Date
-  }>
+    id: string;
+    eac: number;
+    margin: number;
+    marginPercentage: number;
+    cpi: number;
+    spi: number;
+    recordedAt: string;
+  }>;
   alerts: Array<{
-    id: string
-    type: string
-    severity: string
-    title: string
-    message: string
-    status: string
-    createdAt: Date
-  }>
+    id: string;
+    type: string;
+    severity: string;
+    title: string;
+    message: string;
+    status: string;
+    createdAt: string;
+  }>;
 }
 
 export default function CostControlPage() {
-  const [analytics, setAnalytics] = useState<CostAnalytics | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [selectedProject, setSelectedProject] = useState<string>('')
-  const [period, setPeriod] = useState<'weekly' | 'monthly'>('monthly')
-  const [projects, setProjects] = useState<Array<{ id: string; name: string; projectNumber: string }>>([])
+  const [analytics, setAnalytics] = useState<CostAnalytics | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedProject, setSelectedProject] = useState<string>('');
+  const [period, setPeriod] = useState<'weekly' | 'monthly'>('monthly');
+  const [projects, setProjects] = useState<Project[]>([]);
 
   useEffect(() => {
-    // Fetch projects list
-    fetch('/api/projects')
-      .then(res => res.json())
-      .then(data => {
-        if (data.data && data.data.length > 0) {
-          setProjects(data.data)
-          setSelectedProject(data.data[0].id)
-        }
-      })
-      .catch(console.error)
-  }, [])
+    fetchProjects();
+  }, []);
 
   useEffect(() => {
-    if (!selectedProject) return
+    if (selectedProject) {
+      fetchAnalytics();
+    }
+  }, [selectedProject, period]);
 
-    setLoading(true)
-    fetch(\`/api/cost-control/analytics?projectId=\${selectedProject}&period=\${period}\`)
-      .then(res => res.json())
-      .then(data => {
-        setAnalytics(data)
-        setLoading(false)
-      })
-      .catch(err => {
-        console.error(err)
-        setLoading(false)
-      })
-  }, [selectedProject, period])
+  const fetchProjects = async () => {
+    try {
+      const response = await fetch('/api/projects');
+      const data = await response.json();
+      setProjects(data);
+      if (data.length > 0) {
+        setSelectedProject(data[0].id);
+      }
+    } catch (error) {
+      console.error('Failed to fetch projects:', error);
+    }
+  };
 
-  const formatCurrency = (amount: number) => {
-    const currency = analytics?.project?.currency || 'GBP'
+  const fetchAnalytics = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `/api/cost-control/analytics?projectId=${selectedProject}&period=${period}`
+      );
+      const data = await response.json();
+      setAnalytics(data);
+    } catch (error) {
+      console.error('Failed to fetch analytics:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-GB', {
       style: 'currency',
-      currency,
-    }).format(amount)
-  }
-
-  const formatDate = (date: Date | string) => {
-    return new Date(date).toLocaleDateString('en-GB', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    })
-  }
+      currency: 'GBP',
+    }).format(value);
+  };
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case 'CRITICAL':
-        return 'bg-red-100 text-red-800 border-red-300'
+        return 'bg-red-100 border-red-500 text-red-800';
       case 'HIGH':
-        return 'bg-orange-100 text-orange-800 border-orange-300'
+        return 'bg-orange-100 border-orange-500 text-orange-800';
       case 'MEDIUM':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-300'
+        return 'bg-yellow-100 border-yellow-500 text-yellow-800';
       case 'LOW':
-        return 'bg-blue-100 text-blue-800 border-blue-300'
+        return 'bg-blue-100 border-blue-500 text-blue-800';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-300'
+        return 'bg-gray-100 border-gray-500 text-gray-800';
     }
-  }
+  };
 
-  if (loading) {
+  if (loading || !analytics) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading cost control analytics...</p>
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg">Loading analytics...</div>
       </div>
-    )
+    );
   }
 
-  if (!analytics) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-600">No data available</p>
-          <Link href="/" className="mt-4 inline-block text-blue-600 hover:text-blue-800">
-            ← Go Home
-          </Link>
-        </div>
-      </div>
-    )
-  }
-
-  const { costSummary, performanceIndices, cashflow, eacTrend, alerts } = analytics
+  const activeAlerts = analytics.alerts.filter((a) => a.status === 'ACTIVE');
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-blue-600 text-white py-6 shadow-lg">
-        <div className="container mx-auto px-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold">Cashflow & Cost Control</h1>
-              <p className="text-blue-100 mt-1">
-                {analytics.project.name} ({analytics.project.projectNumber})
-              </p>
-            </div>
-            <Link href="/" className="btn bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded">
-              ← Home
-            </Link>
+    <div className="container mx-auto p-6 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Cost Control Analytics</h1>
+          <p className="text-gray-600 mt-1">
+            {analytics.project.name} ({analytics.project.projectNumber})
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <select
+            value={selectedProject}
+            onChange={(e) => setSelectedProject(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {projects.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
+          </select>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPeriod('weekly')}
+              className={`px-4 py-2 rounded-lg ${
+                period === 'weekly'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              Weekly
+            </button>
+            <button
+              onClick={() => setPeriod('monthly')}
+              className={`px-4 py-2 rounded-lg ${
+                period === 'monthly'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              Monthly
+            </button>
           </div>
         </div>
-      </header>
+      </div>
 
-      <main className="container mx-auto px-4 py-8">
-        {/* Project Selector and Period Toggle */}
-        <div className="card mb-6 p-4 bg-white rounded-lg shadow">
-          <div className="flex flex-wrap gap-4 items-center">
-            <div className="flex-1 min-w-[250px]">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Select Project
-              </label>
-              <select
-                value={selectedProject}
-                onChange={(e) => setSelectedProject(e.target.value)}
-                className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
-              >
-                {projects.map((proj) => (
-                  <option key={proj.id} value={proj.id}>
-                    {proj.projectNumber} - {proj.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Cashflow Period
-              </label>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setPeriod('weekly')}
-                  className={\`px-4 py-2 rounded \${
-                    period === 'weekly'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }\`}
-                >
-                  Weekly
-                </button>
-                <button
-                  onClick={() => setPeriod('monthly')}
-                  className={\`px-4 py-2 rounded \${
-                    period === 'monthly'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }\`}
-                >
-                  Monthly
-                </button>
+      {/* Alerts Section */}
+      {activeAlerts.length > 0 && (
+        <div className="space-y-2">
+          <h2 className="text-xl font-semibold">Active Alerts</h2>
+          {activeAlerts.map((alert) => (
+            <div
+              key={alert.id}
+              className={`p-4 rounded-lg border-l-4 ${getSeverityColor(
+                alert.severity
+              )}`}
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="font-semibold">{alert.title}</h3>
+                  <p className="text-sm mt-1">{alert.message}</p>
+                </div>
+                <span className="text-xs font-semibold px-2 py-1 rounded">
+                  {alert.severity}
+                </span>
               </div>
             </div>
-          </div>
+          ))}
         </div>
+      )}
 
-        {/* Alerts Section */}
-        {alerts.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold mb-4">🚨 Active Alerts</h2>
-            <div className="grid grid-cols-1 gap-4">
-              {alerts.map((alert) => (
+      {/* Cost Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="p-4 bg-white rounded-lg shadow">
+          <h3 className="text-sm font-medium text-gray-600">Total Budget</h3>
+          <p className="text-2xl font-bold mt-2">
+            {formatCurrency(analytics.costSummary.totalBudget)}
+          </p>
+        </div>
+        <div className="p-4 bg-white rounded-lg shadow">
+          <h3 className="text-sm font-medium text-gray-600">Actual Cost</h3>
+          <p className="text-2xl font-bold mt-2">
+            {formatCurrency(analytics.costSummary.actualCost)}
+          </p>
+        </div>
+        <div className="p-4 bg-white rounded-lg shadow">
+          <h3 className="text-sm font-medium text-gray-600">Committed Cost</h3>
+          <p className="text-2xl font-bold mt-2">
+            {formatCurrency(analytics.costSummary.committedCost)}
+          </p>
+        </div>
+        <div className="p-4 bg-white rounded-lg shadow">
+          <h3 className="text-sm font-medium text-gray-600">EAC</h3>
+          <p className="text-2xl font-bold mt-2">
+            {formatCurrency(analytics.costSummary.eac)}
+          </p>
+          <p
+            className={`text-sm mt-1 ${
+              analytics.costSummary.variance < 0
+                ? 'text-red-600'
+                : 'text-green-600'
+            }`}
+          >
+            Variance: {formatCurrency(analytics.costSummary.variance)}
+          </p>
+        </div>
+      </div>
+
+      {/* Margin Analysis & Performance Indices */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Margin Analysis */}
+        <div className="p-4 bg-white rounded-lg shadow">
+          <h2 className="text-xl font-semibold mb-4">Margin Analysis</h2>
+          <div className="space-y-4">
+            <div>
+              <div className="flex justify-between mb-2">
+                <span className="text-sm font-medium">Margin</span>
+                <span className="text-sm font-bold">
+                  {formatCurrency(analytics.costSummary.margin)}
+                </span>
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between mb-2">
+                <span className="text-sm font-medium">Margin Percentage</span>
+                <span
+                  className={`text-sm font-bold ${
+                    analytics.costSummary.marginPercentage <
+                    analytics.costSummary.marginThreshold
+                      ? 'text-red-600'
+                      : 'text-green-600'
+                  }`}
+                >
+                  {analytics.costSummary.marginPercentage.toFixed(2)}%
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
                 <div
-                  key={alert.id}
-                  className={\`p-4 bg-white rounded-lg shadow border-2 \${getSeverityColor(alert.severity)}\`}
+                  className={`h-2 rounded-full ${
+                    analytics.costSummary.marginPercentage <
+                    analytics.costSummary.marginThreshold
+                      ? 'bg-red-600'
+                      : 'bg-green-600'
+                  }`}
+                  style={{
+                    width: `${Math.min(
+                      Math.max(analytics.costSummary.marginPercentage, 0),
+                      100
+                    )}%`,
+                  }}
+                ></div>
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                Threshold: {analytics.costSummary.marginThreshold}%
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Performance Indices */}
+        <div className="p-4 bg-white rounded-lg shadow">
+          <h2 className="text-xl font-semibold mb-4">Performance Indices</h2>
+          <div className="space-y-4">
+            <div>
+              <div className="flex justify-between mb-2">
+                <span className="text-sm font-medium">
+                  Cost Performance Index (CPI)
+                </span>
+                <span
+                  className={`text-sm font-bold ${
+                    analytics.performanceIndices.cpi < 1
+                      ? 'text-red-600'
+                      : 'text-green-600'
+                  }`}
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="font-semibold text-lg">{alert.title}</span>
-                        <span className={\`px-2 py-1 text-xs rounded font-semibold \${getSeverityColor(alert.severity)}\`}>
-                          {alert.severity}
-                        </span>
-                      </div>
-                      <p className="text-sm mb-2">{alert.message}</p>
-                      <p className="text-xs text-gray-500">
-                        Created: {formatDate(alert.createdAt)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Cost Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="p-4 bg-white rounded-lg shadow">
-            <h3 className="text-sm text-gray-600 mb-1">Total Budget</h3>
-            <p className="text-2xl font-bold text-gray-800">
-              {formatCurrency(costSummary.totalBudget)}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              Original: {formatCurrency(costSummary.budget)}
-            </p>
-          </div>
-          <div className="p-4 bg-white rounded-lg shadow">
-            <h3 className="text-sm text-gray-600 mb-1">Actual Cost</h3>
-            <p className="text-2xl font-bold text-blue-600">
-              {formatCurrency(costSummary.actualCost)}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              Spent to date
-            </p>
-          </div>
-          <div className="p-4 bg-white rounded-lg shadow">
-            <h3 className="text-sm text-gray-600 mb-1">Committed Cost</h3>
-            <p className="text-2xl font-bold text-orange-600">
-              {formatCurrency(costSummary.committedCost)}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              Contracted but not paid
-            </p>
-          </div>
-          <div className="p-4 bg-white rounded-lg shadow">
-            <h3 className="text-sm text-gray-600 mb-1">EAC</h3>
-            <p className="text-2xl font-bold text-purple-600">
-              {formatCurrency(costSummary.eac)}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              Estimate at Completion
-            </p>
-          </div>
-        </div>
-
-        {/* Margin and Performance */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <div className="p-4 bg-white rounded-lg shadow">
-            <h3 className="text-lg font-semibold mb-4">Margin Analysis</h3>
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm text-gray-600">Margin</span>
-                  <span className="text-2xl font-bold text-green-600">
-                    {formatCurrency(costSummary.margin)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Margin %</span>
-                  <span className={\`text-xl font-bold \${
-                    costSummary.marginPercentage >= costSummary.marginThreshold
-                      ? 'text-green-600'
-                      : 'text-red-600'
-                  }\`}>
-                    {costSummary.marginPercentage.toFixed(2)}%
-                  </span>
-                </div>
-                <div className="mt-2 h-3 bg-gray-200 rounded-full overflow-hidden">
-                  <div
-                    className={\`h-full \${
-                      costSummary.marginPercentage >= costSummary.marginThreshold
-                        ? 'bg-green-500'
-                        : 'bg-red-500'
-                    }\`}
-                    style={{ width: \`\${Math.min(100, Math.max(0, costSummary.marginPercentage))}%\` }}
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  Threshold: {costSummary.marginThreshold}%
-                </p>
+                  {analytics.performanceIndices.cpi.toFixed(2)}
+                </span>
               </div>
-              <div className="border-t pt-4">
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-sm text-gray-600">Approved Variations</span>
-                  <span className="font-semibold">
-                    {formatCurrency(costSummary.approvedVariations)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Variance (Budget - EAC)</span>
-                  <span className={\`font-semibold \${
-                    costSummary.variance >= 0 ? 'text-green-600' : 'text-red-600'
-                  }\`}>
-                    {formatCurrency(costSummary.variance)}
-                  </span>
-                </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className={`h-2 rounded-full ${
+                    analytics.performanceIndices.cpi < 1
+                      ? 'bg-red-600'
+                      : 'bg-green-600'
+                  }`}
+                  style={{
+                    width: `${Math.min(
+                      analytics.performanceIndices.cpi * 100,
+                      100
+                    )}%`,
+                  }}
+                ></div>
               </div>
             </div>
-          </div>
-
-          <div className="p-4 bg-white rounded-lg shadow">
-            <h3 className="text-lg font-semibold mb-4">Performance Indices</h3>
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm text-gray-600">CPI (Cost Performance Index)</span>
-                  <span className={\`text-2xl font-bold \${
-                    performanceIndices.cpi >= 1 ? 'text-green-600' : 'text-red-600'
-                  }\`}>
-                    {performanceIndices.cpi.toFixed(2)}
-                  </span>
-                </div>
-                <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
-                  <div
-                    className={\`h-full \${performanceIndices.cpi >= 1 ? 'bg-green-500' : 'bg-red-500'}\`}
-                    style={{ width: \`\${Math.min(100, performanceIndices.cpi * 100)}%\` }}
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  {performanceIndices.cpi >= 1 ? 'Under budget' : 'Over budget'}
-                </p>
+            <div>
+              <div className="flex justify-between mb-2">
+                <span className="text-sm font-medium">
+                  Schedule Performance Index (SPI)
+                </span>
+                <span
+                  className={`text-sm font-bold ${
+                    analytics.performanceIndices.spi < 1
+                      ? 'text-red-600'
+                      : 'text-green-600'
+                  }`}
+                >
+                  {analytics.performanceIndices.spi.toFixed(2)}
+                </span>
               </div>
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm text-gray-600">SPI (Schedule Performance Index)</span>
-                  <span className={\`text-2xl font-bold \${
-                    performanceIndices.spi >= 1 ? 'text-green-600' : 'text-red-600'
-                  }\`}>
-                    {performanceIndices.spi.toFixed(2)}
-                  </span>
-                </div>
-                <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
-                  <div
-                    className={\`h-full \${performanceIndices.spi >= 1 ? 'bg-green-500' : 'bg-red-500'}\`}
-                    style={{ width: \`\${Math.min(100, performanceIndices.spi * 100)}%\` }}
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  {performanceIndices.spi >= 1 ? 'Ahead of schedule' : 'Behind schedule'}
-                </p>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className={`h-2 rounded-full ${
+                    analytics.performanceIndices.spi < 1
+                      ? 'bg-red-600'
+                      : 'bg-green-600'
+                  }`}
+                  style={{
+                    width: `${Math.min(
+                      analytics.performanceIndices.spi * 100,
+                      100
+                    )}%`,
+                  }}
+                ></div>
               </div>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Cashflow - Planned vs Actual */}
-        <div className="p-4 bg-white rounded-lg shadow mb-8">
-          <h2 className="text-2xl font-bold mb-4">
-            Planned vs Actual Cash Flow ({period === 'weekly' ? 'Weekly' : 'Monthly'})
-          </h2>
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={cashflow.aggregated}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="period" />
-              <YAxis />
-              <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-              <Legend />
-              <Bar dataKey="forecastInflow" fill="#10b981" name="Forecast Inflow" />
-              <Bar dataKey="actualInflow" fill="#059669" name="Actual Inflow" />
-              <Bar dataKey="forecastOutflow" fill="#ef4444" name="Forecast Outflow" />
-              <Bar dataKey="actualOutflow" fill="#dc2626" name="Actual Outflow" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+      {/* Cashflow Chart */}
+      <div className="p-4 bg-white rounded-lg shadow">
+        <h2 className="text-xl font-semibold mb-4">
+          Cashflow ({period === 'weekly' ? 'Weekly' : 'Monthly'})
+        </h2>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={analytics.cashflow.aggregated}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="period" />
+            <YAxis />
+            <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+            <Legend />
+            <Bar
+              dataKey="forecastInflow"
+              fill="#10b981"
+              name="Forecast Inflow"
+            />
+            <Bar dataKey="actualInflow" fill="#059669" name="Actual Inflow" />
+            <Bar
+              dataKey="forecastOutflow"
+              fill="#f59e0b"
+              name="Forecast Outflow"
+            />
+            <Bar
+              dataKey="actualOutflow"
+              fill="#d97706"
+              name="Actual Outflow"
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
 
-        {/* S-Curve */}
-        <div className="p-4 bg-white rounded-lg shadow mb-8">
-          <h2 className="text-2xl font-bold mb-4">S-Curve: Cumulative Cash Flow</h2>
-          <ResponsiveContainer width="100%" height={400}>
-            <AreaChart data={cashflow.sCurve}>
-              <defs>
-                <linearGradient id="colorForecast" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1} />
-                </linearGradient>
-                <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0.1} />
-                </linearGradient>
-              </defs>
+      {/* S-Curve Chart */}
+      <div className="p-4 bg-white rounded-lg shadow">
+        <h2 className="text-xl font-semibold mb-4">S-Curve (Cumulative)</h2>
+        <ResponsiveContainer width="100%" height={300}>
+          <AreaChart data={analytics.cashflow.sCurve}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="date" />
+            <YAxis />
+            <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+            <Legend />
+            <Area
+              type="monotone"
+              dataKey="cumulativeForecast"
+              stroke="#3b82f6"
+              fill="#93c5fd"
+              name="Cumulative Forecast"
+            />
+            <Area
+              type="monotone"
+              dataKey="cumulativeActual"
+              stroke="#10b981"
+              fill="#6ee7b7"
+              name="Cumulative Actual"
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* EAC Trend Chart */}
+      {analytics.eacTrend.length > 0 && (
+        <div className="p-4 bg-white rounded-lg shadow">
+          <h2 className="text-xl font-semibold mb-4">EAC Trend</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={analytics.eacTrend}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
-                dataKey="date"
-                tickFormatter={(date) => new Date(date).toLocaleDateString('en-GB', { month: 'short', year: '2-digit' })}
+                dataKey="recordedAt"
+                tickFormatter={(value) =>
+                  new Date(value).toLocaleDateString('en-GB', {
+                    month: 'short',
+                    day: 'numeric',
+                  })
+                }
               />
-              <YAxis />
+              <YAxis yAxisId="left" />
+              <YAxis yAxisId="right" orientation="right" />
               <Tooltip
-                labelFormatter={(date) => formatDate(date)}
-                formatter={(value) => formatCurrency(Number(value))}
+                formatter={(value, name) => {
+                  if (name === 'Margin %') {
+                    return `${Number(value).toFixed(2)}%`;
+                  }
+                  return formatCurrency(Number(value));
+                }}
+                labelFormatter={(value) =>
+                  new Date(value).toLocaleDateString('en-GB')
+                }
               />
               <Legend />
-              <Area
+              <Line
+                yAxisId="left"
                 type="monotone"
-                dataKey="cumulativeForecast"
+                dataKey="eac"
                 stroke="#3b82f6"
-                fill="url(#colorForecast)"
-                name="Planned Cumulative"
+                name="EAC"
+                strokeWidth={2}
               />
-              <Area
+              <Line
+                yAxisId="left"
                 type="monotone"
-                dataKey="cumulativeActual"
+                dataKey="margin"
                 stroke="#10b981"
-                fill="url(#colorActual)"
-                name="Actual Cumulative"
+                name="Margin"
+                strokeWidth={2}
               />
-            </AreaChart>
+              <Line
+                yAxisId="right"
+                type="monotone"
+                dataKey="marginPercentage"
+                stroke="#f59e0b"
+                name="Margin %"
+                strokeWidth={2}
+              />
+            </LineChart>
           </ResponsiveContainer>
         </div>
-
-        {/* EAC Trend */}
-        {eacTrend.length > 0 && (
-          <div className="p-4 bg-white rounded-lg shadow mb-8">
-            <h2 className="text-2xl font-bold mb-4">EAC Trend Analysis</h2>
-            <ResponsiveContainer width="100%" height={350}>
-              <LineChart data={eacTrend}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="recordedAt"
-                  tickFormatter={(date) => formatDate(date)}
-                />
-                <YAxis yAxisId="left" />
-                <YAxis yAxisId="right" orientation="right" />
-                <Tooltip
-                  labelFormatter={(date) => formatDate(date)}
-                  formatter={(value, name) => {
-                    if (name === 'Margin %' || name === 'CPI' || name === 'SPI') {
-                      return Number(value).toFixed(2)
-                    }
-                    return formatCurrency(Number(value))
-                  }}
-                />
-                <Legend />
-                <Line
-                  yAxisId="left"
-                  type="monotone"
-                  dataKey="eac"
-                  stroke="#8b5cf6"
-                  strokeWidth={2}
-                  name="EAC"
-                />
-                <Line
-                  yAxisId="left"
-                  type="monotone"
-                  dataKey="margin"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  name="Margin"
-                />
-                <Line
-                  yAxisId="right"
-                  type="monotone"
-                  dataKey="marginPercentage"
-                  stroke="#f59e0b"
-                  strokeWidth={2}
-                  name="Margin %"
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-      </main>
+      )}
     </div>
-  )
+  );
 }
