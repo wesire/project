@@ -59,13 +59,6 @@ export async function GET(request: NextRequest) {
             projectNumber: true,
           },
         },
-        requestedByUser: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
       },
     })
 
