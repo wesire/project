@@ -335,6 +335,43 @@ npx prisma migrate deploy
 
 ## 🧪 Testing
 
+### End-to-End Tests (Playwright)
+
+The project includes comprehensive E2E regression tests covering key user flows:
+
+```bash
+# Install test dependencies (if not already installed)
+npm install --legacy-peer-deps
+
+# Install Playwright browsers
+npx playwright install chromium
+
+# Run all tests
+npm run test
+
+# Run tests with interactive UI
+npm run test:ui
+
+# Run tests in headed mode (see browser)
+npm run test:headed
+
+# Run smoke tests for quick verification
+npm run test:smoke
+
+# View test report
+npm run test:report
+```
+
+**Test Coverage:**
+- ✅ Portfolio auth guard (19 tests total)
+- ✅ Changes route navigation
+- ✅ Project register button navigation
+- ✅ Risk export download trigger
+
+See [TESTING.md](./TESTING.md) for detailed test documentation.
+
+### Code Quality
+
 ```bash
 # Run linting
 npm run lint
