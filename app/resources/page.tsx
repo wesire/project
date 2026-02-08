@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import toast, { Toaster } from 'react-hot-toast'
 
 interface Resource {
@@ -24,34 +25,57 @@ export default function ResourcesPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [resources, setResources] = useState<Resource[]>([])
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [authLoading, setAuthLoading] = useState(true)
+  const router = useRouter()
+
+  const handleLogin = () => {
+    router.push('/login?returnUrl=/resources')
+  }
+
+  const fetchResources = async () => {
+    try {
+      const response = await fetch('/api/resources')
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication required. Please log in.')
+        }
+        throw new Error('Failed to fetch resources')
+      }
+      
+      const data = await response.json()
+      // Handle both paginated and non-paginated responses
+      const resourcesData = data.data || data
+      setResources(Array.isArray(resourcesData) ? resourcesData : [])
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load resources'
+      setError(errorMessage)
+      toast.error(errorMessage)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const fetchResources = async () => {
-      try {
-        const response = await fetch('/api/resources')
-        
-        if (!response.ok) {
-          if (response.status === 401) {
-            throw new Error('Authentication required. Please log in.')
-          }
-          throw new Error('Failed to fetch resources')
-        }
-        
-        const data = await response.json()
-        // Handle both paginated and non-paginated responses
-        const resourcesData = data.data || data
-        setResources(Array.isArray(resourcesData) ? resourcesData : [])
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to load resources'
-        setError(errorMessage)
-        toast.error(errorMessage)
-      } finally {
-        setIsLoading(false)
-      }
+    const token = localStorage.getItem('authToken')
+    
+    if (!token) {
+      setIsAuthenticated(false)
+      setAuthLoading(false)
+      setIsLoading(false)
+      return
     }
-
-    fetchResources()
+    
+    setIsAuthenticated(true)
+    setAuthLoading(false)
   }, [])
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchResources()
+    }
+  }, [isAuthenticated])
 
   const formatCurrency = (amount: number, currency: string = 'GBP') => {
     return new Intl.NumberFormat('en-GB', {
@@ -67,6 +91,49 @@ export default function ResourcesPage() {
       case 'UNAVAILABLE': return 'bg-red-100 text-red-800'
       default: return 'bg-gray-100 text-gray-800'
     }
+  }
+
+  // Auth loading state
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Auth check
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="card max-w-md">
+          <div className="text-center">
+            <div className="text-purple-600 text-5xl mb-4">🔒</div>
+            <h2 className="text-xl font-bold text-gray-800 mb-2">Authentication Required</h2>
+            <p className="text-gray-600 mb-6">
+              Please log in to access resources.
+            </p>
+            <div className="space-y-3">
+              <button 
+                onClick={handleLogin}
+                className="btn btn-primary w-full"
+              >
+                Sign In
+              </button>
+              <Link 
+                href="/"
+                className="btn bg-gray-100 hover:bg-gray-200 text-gray-700 w-full inline-block text-center"
+              >
+                ← Back to Home
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   // Loading state
