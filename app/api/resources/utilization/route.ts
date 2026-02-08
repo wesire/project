@@ -5,6 +5,14 @@ import { AuthenticationError } from '@/lib/errors'
 import { startOfDay, endOfDay, differenceInDays } from 'date-fns'
 
 /**
+ * Calculate daily hours for an allocation by distributing total hours evenly
+ */
+function calculateDailyHours(allocation: { allocatedHours: number; startDate: Date; endDate: Date }): number {
+  const allocationDays = differenceInDays(allocation.endDate, allocation.startDate) + 1
+  return allocation.allocatedHours / allocationDays
+}
+
+/**
  * Calculate resource utilization and detect over-allocation
  * GET /api/resources/utilization?resourceId=xxx&startDate=xxx&endDate=xxx
  */
@@ -129,9 +137,7 @@ export async function GET(request: NextRequest) {
       })
       
       const allocatedHours = dayAllocations.reduce((sum, allocation) => {
-        // Distribute allocated hours evenly across the allocation period
-        const allocationDays = differenceInDays(allocation.endDate, allocation.startDate) + 1
-        return sum + (allocation.allocatedHours / allocationDays)
+        return sum + calculateDailyHours(allocation)
       }, 0)
       
       const utilizationPercentage = availableHours > 0 
@@ -155,7 +161,7 @@ export async function GET(request: NextRequest) {
         isOverAllocated,
         allocations: dayAllocations.map(a => ({
           projectName: a.project.name,
-          hours: Math.round((a.allocatedHours / (differenceInDays(a.endDate, a.startDate) + 1)) * 100) / 100
+          hours: Math.round(calculateDailyHours(a) * 100) / 100
         }))
       })
     }

@@ -4,6 +4,14 @@ import { authenticateRequest } from '@/lib/middleware'
 import { AuthenticationError } from '@/lib/errors'
 import { startOfDay, differenceInDays, addDays } from 'date-fns'
 
+// Priority order for task sorting (lower number = lower priority)
+const PRIORITY_ORDER = {
+  LOW: 0,
+  MEDIUM: 1,
+  HIGH: 2,
+  CRITICAL: 3
+} as const
+
 interface RebalanceSuggestion {
   type: 'move_task' | 'adjust_allocation' | 'redistribute_hours'
   priority: 'high' | 'medium' | 'low'
@@ -153,6 +161,8 @@ export async function GET(request: NextRequest) {
     const totalDays = differenceInDays(endDate, startDate) + 1
     
     // Group allocations by resource
+    // Note: ResourceAllocation has both userId (required, for people) and resourceId (optional, for equipment)
+    // We use resourceId when available (equipment), otherwise userId (people)
     const allocationsByResource = new Map<string, typeof allocations>()
     allocations.forEach(allocation => {
       const resourceId = allocation.resourceId || allocation.userId
@@ -231,8 +241,7 @@ export async function GET(request: NextRequest) {
         task.priority !== 'CRITICAL'
       ).sort((a, b) => {
         // Sort by priority (LOW first, then MEDIUM)
-        const priorityOrder = { LOW: 0, MEDIUM: 1, HIGH: 2, CRITICAL: 3 }
-        return priorityOrder[a.priority] - priorityOrder[b.priority]
+        return PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]
       })
       
       nonCriticalTasks.forEach(task => {
