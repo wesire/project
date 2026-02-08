@@ -29,6 +29,34 @@ export default function ResourcesPage() {
   const [authLoading, setAuthLoading] = useState(true)
   const router = useRouter()
 
+  const handleLogin = () => {
+    router.push('/login?returnUrl=/resources')
+  }
+
+  const fetchResources = async () => {
+    try {
+      const response = await fetch('/api/resources')
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication required. Please log in.')
+        }
+        throw new Error('Failed to fetch resources')
+      }
+      
+      const data = await response.json()
+      // Handle both paginated and non-paginated responses
+      const resourcesData = data.data || data
+      setResources(Array.isArray(resourcesData) ? resourcesData : [])
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load resources'
+      setError(errorMessage)
+      toast.error(errorMessage)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   useEffect(() => {
     const token = localStorage.getItem('authToken')
     
@@ -41,38 +69,9 @@ export default function ResourcesPage() {
     
     setIsAuthenticated(true)
     setAuthLoading(false)
-    fetchResources()
   }, [])
 
-  const handleLogin = () => {
-    router.push('/login?returnUrl=/resources')
-  }
-
   useEffect(() => {
-    const fetchResources = async () => {
-      try {
-        const response = await fetch('/api/resources')
-        
-        if (!response.ok) {
-          if (response.status === 401) {
-            throw new Error('Authentication required. Please log in.')
-          }
-          throw new Error('Failed to fetch resources')
-        }
-        
-        const data = await response.json()
-        // Handle both paginated and non-paginated responses
-        const resourcesData = data.data || data
-        setResources(Array.isArray(resourcesData) ? resourcesData : [])
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to load resources'
-        setError(errorMessage)
-        toast.error(errorMessage)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
     if (isAuthenticated) {
       fetchResources()
     }
