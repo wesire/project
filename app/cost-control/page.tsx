@@ -86,6 +86,7 @@ interface CostAnalytics {
 export default function CostControlPage() {
   const [analytics, setAnalytics] = useState<CostAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<string>('');
   const [period, setPeriod] = useState<'weekly' | 'monthly'>('monthly');
   const [projects, setProjects] = useState<Project[]>([]);
@@ -103,26 +104,35 @@ export default function CostControlPage() {
   const fetchProjects = async () => {
     try {
       const response = await apiFetch('/api/projects');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch projects: ${response.statusText}`);
+      }
       const data = await response.json();
       setProjects(data);
       if (data.length > 0) {
         setSelectedProject(data[0].id);
       }
-    } catch (error) {
-      console.error('Failed to fetch projects:', error);
+    } catch (err) {
+      console.error('Failed to fetch projects:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load projects. Please try again.');
     }
   };
 
   const fetchAnalytics = async () => {
     setLoading(true);
+    setError(null);
     try {
       const response = await apiFetch(
         `/api/cost-control/analytics?projectId=${selectedProject}&period=${period}`
       );
+      if (!response.ok) {
+        throw new Error(`Failed to fetch analytics: ${response.statusText}`);
+      }
       const data = await response.json();
       setAnalytics(data);
-    } catch (error) {
-      console.error('Failed to fetch analytics:', error);
+    } catch (err) {
+      console.error('Failed to fetch analytics:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load analytics. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -150,10 +160,67 @@ export default function CostControlPage() {
     }
   };
 
-  if (loading || !analytics) {
+  if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg">Loading analytics...</div>
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600 text-lg">Loading cost control analytics...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded-lg shadow-md max-w-2xl mx-auto">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg className="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div className="ml-3 flex-1">
+              <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Cost Control Data</h3>
+              <p className="text-red-700 mb-4">{error}</p>
+              <button
+                onClick={fetchAnalytics}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!analytics) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="bg-yellow-50 border-l-4 border-yellow-500 p-6 rounded-lg shadow-md max-w-2xl mx-auto">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg className="h-6 w-6 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div className="ml-3 flex-1">
+              <h3 className="text-lg font-semibold text-yellow-800 mb-2">No Data Available</h3>
+              <p className="text-yellow-700 mb-4">No analytics data available. Please try again or select a different project.</p>
+              <button
+                onClick={fetchAnalytics}
+                className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-medium transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
