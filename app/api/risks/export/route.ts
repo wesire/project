@@ -16,11 +16,23 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const format = searchParams.get('format') || 'xlsx'
     const projectId = searchParams.get('projectId')
+    const filterStatus = searchParams.get('status')
+    const filterOwner = searchParams.get('owner')
+    const filterCategory = searchParams.get('category')
     
     // Build where clause
     let where: Record<string, unknown> = {}
     if (projectId) {
       where.projectId = projectId
+    }
+    if (filterStatus && filterStatus !== 'ALL') {
+      where.status = filterStatus
+    }
+    if (filterOwner && filterOwner !== 'ALL') {
+      where.owner = filterOwner
+    }
+    if (filterCategory && filterCategory !== 'ALL') {
+      where.category = filterCategory
     }
     
     // Apply project access filter
