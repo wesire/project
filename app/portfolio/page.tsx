@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { apiFetch } from '@/lib/api-client'
 
 interface KPIs {
   totalBudget: number
@@ -110,21 +111,7 @@ export default function PortfolioDashboard() {
         return
       }
       
-      const response = await fetch('/api/portfolio/dashboard', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      })
-
-      if (response.status === 401) {
-        // Token is invalid or expired
-        localStorage.removeItem('authToken')
-        setIsAuthenticated(false)
-        setAuthError(true)
-        setError('Your session has expired. Please log in again.')
-        setLoading(false)
-        return
-      }
+      const response = await apiFetch('/api/portfolio/dashboard')
 
       if (!response.ok) {
         throw new Error('Failed to fetch dashboard data')
