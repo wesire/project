@@ -1,30 +1,92 @@
 'use client'
 
 import Link from 'next/link'
-import { use } from 'react'
+import { use, useState, useEffect } from 'react'
+import toast, { Toaster } from 'react-hot-toast'
+
+interface Project {
+  id: string
+  projectNumber: string
+  name: string
+  description?: string
+  status: string
+  budget: number
+  currency: string
+  startDate: string
+  endDate: string
+  client?: string
+  location?: string
+  _count?: {
+    risks: number
+    tasks: number
+    changes: number
+    issues: number
+  }
+  members?: Array<{
+    user: {
+      id: string
+      name: string
+      email: string
+    }
+  }>
+}
 
 export default function ProjectDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
+  const [isLoading, setIsLoading] = useState(true)
+  const [project, setProject] = useState<Project | null>(null)
+
+  useEffect(() => {
+    const fetchProject = async () => {
+      try {
+        const response = await fetch(`/api/projects/${id}`)
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch project')
+        }
+        
+        const data = await response.json()
+        setProject(data)
+      } catch (error) {
+        console.error('Error fetching project:', error)
+        toast.error('Failed to load project data')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchProject()
+  }, [id])
   
-  // Sample data - in real implementation, fetch from API
-  const project = {
-    id: id,
-    projectNumber: 'PRJ001',
-    name: 'City Centre Office Block',
-    status: 'ACTIVE',
-    budget: 5000000,
-    actualCost: 4200000,
-    startDate: '2024-01-15',
-    endDate: '2025-06-30',
-    client: 'ABC Corporation',
-    description: 'A multi-story office building in the city centre featuring modern architecture and sustainable design.',
-    location: 'Downtown District',
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading project...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!project) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Project Not Found</h2>
+          <p className="text-gray-600 mb-4">The requested project could not be found.</p>
+          <Link href="/projects" className="btn btn-primary">
+            Back to Projects
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-GB', {
       style: 'currency',
-      currency: 'GBP',
+      currency: project.currency || 'GBP',
     }).format(amount)
   }
 
@@ -41,6 +103,7 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ id: s
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Toaster position="top-right" />
       <header className="bg-blue-600 text-white py-6 shadow-lg">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center">
@@ -67,21 +130,27 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ id: s
                 </span>
               </div>
               
-              <p className="text-gray-600 mb-4">{project.description}</p>
+              {project.description && (
+                <p className="text-gray-600 mb-4">{project.description}</p>
+              )}
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-gray-600">Project Number</p>
                   <p className="font-semibold">{project.projectNumber}</p>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-600">Client</p>
-                  <p className="font-semibold">{project.client}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Location</p>
-                  <p className="font-semibold">{project.location}</p>
-                </div>
+                {project.client && (
+                  <div>
+                    <p className="text-sm text-gray-600">Client</p>
+                    <p className="font-semibold">{project.client}</p>
+                  </div>
+                )}
+                {project.location && (
+                  <div>
+                    <p className="text-sm text-gray-600">Location</p>
+                    <p className="font-semibold">{project.location}</p>
+                  </div>
+                )}
                 <div>
                   <p className="text-sm text-gray-600">Status</p>
                   <p className="font-semibold">{project.status}</p>
@@ -95,18 +164,6 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ id: s
                 <div>
                   <p className="text-sm text-gray-600">Budget</p>
                   <p className="font-semibold text-2xl">{formatCurrency(project.budget)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Actual Cost</p>
-                  <p className="font-semibold text-2xl">{formatCurrency(project.actualCost)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Remaining</p>
-                  <p className="font-semibold text-2xl">{formatCurrency(project.budget - project.actualCost)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Progress</p>
-                  <p className="font-semibold text-2xl">{Math.round((project.actualCost / project.budget) * 100)}%</p>
                 </div>
               </div>
             </div>
@@ -163,19 +220,19 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ id: s
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Risks</span>
-                  <span className="font-semibold">0</span>
+                  <span className="font-semibold">{project._count?.risks || 0}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Tasks</span>
-                  <span className="font-semibold">0</span>
+                  <span className="font-semibold">{project._count?.tasks || 0}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Changes</span>
-                  <span className="font-semibold">0</span>
+                  <span className="font-semibold">{project._count?.changes || 0}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Team Members</span>
-                  <span className="font-semibold">0</span>
+                  <span className="font-semibold">{project.members?.length || 0}</span>
                 </div>
               </div>
             </div>

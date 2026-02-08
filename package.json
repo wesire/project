@@ -12,34 +12,35 @@
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
   },
   "dependencies": {
-    "next": "^15.1.6",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
     "@prisma/client": "^6.2.0",
     "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.2",
-    "zod": "^3.24.1",
     "date-fns": "^4.1.0",
-    "recharts": "^2.15.0",
+    "exceljs": "^4.4.0",
+    "gantt-task-react": "^0.3.9",
+    "jsonwebtoken": "^9.0.2",
     "jspdf": "^4.1.0",
     "jspdf-autotable": "^3.8.4",
-    "exceljs": "^4.4.0",
+    "next": "^15.1.6",
     "pptxgenjs": "^3.12.0",
-    "gantt-task-react": "^0.3.9"
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-hot-toast": "^2.6.0",
+    "recharts": "^2.15.0",
+    "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^22.10.5",
     "@types/react": "^19.0.6",
     "@types/react-dom": "^19.0.2",
-    "@types/bcryptjs": "^2.4.6",
-    "@types/jsonwebtoken": "^9.0.7",
-    "typescript": "^5.7.2",
-    "prisma": "^6.2.0",
-    "ts-node": "^10.9.2",
+    "autoprefixer": "^10.4.20",
     "eslint": "^9.18.0",
     "eslint-config-next": "^15.1.6",
-    "tailwindcss": "^3.4.17",
     "postcss": "^8.4.49",
-    "autoprefixer": "^10.4.20"
+    "prisma": "^6.2.0",
+    "tailwindcss": "^3.4.17",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
   }
 }
