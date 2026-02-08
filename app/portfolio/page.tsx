@@ -81,6 +81,7 @@ export default function PortfolioDashboard() {
 
   useEffect(() => {
     checkAuthAndFetchData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const checkAuthAndFetchData = async () => {

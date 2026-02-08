@@ -124,7 +124,7 @@ export default function LoginPage() {
         </div>
 
         <div className="mt-6 text-center text-sm text-gray-600">
-          <p>Don't have an account? Contact your administrator.</p>
+          <p>Don&apos;t have an account? Contact your administrator.</p>
         </div>
       </div>
     </div>
