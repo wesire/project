@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useState, useMemo } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import toast, { Toaster } from 'react-hot-toast'
 
 interface Risk {
   id: string
@@ -142,6 +143,9 @@ export default function RiskRegister() {
   const [filterOwner, setFilterOwner] = useState<string>('ALL')
   const [filterCategory, setFilterCategory] = useState<string>('ALL')
   
+  // State for export loading
+  const [isExporting, setIsExporting] = useState(false)
+  
   // State for modals
   const [showAddModal, setShowAddModal] = useState(false)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
@@ -263,6 +267,11 @@ export default function RiskRegister() {
 
   // Handle export
   const handleExport = async (format: 'csv' | 'xlsx') => {
+    if (isExporting) return // Prevent multiple simultaneous exports
+    
+    setIsExporting(true)
+    const toastId = toast.loading(`Exporting ${format.toUpperCase()} file...`)
+    
     try {
       // Build query parameters with active filters
       const params = new URLSearchParams({ format })
@@ -297,10 +306,14 @@ export default function RiskRegister() {
       link.click()
       document.body.removeChild(link)
       window.URL.revokeObjectURL(url)
+      
+      toast.success(`${format.toUpperCase()} file exported successfully!`, { id: toastId })
     } catch (error) {
       console.error('Export error:', error)
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      alert(`Failed to export risk register: ${errorMessage}. Please try again.`)
+      toast.error(`Failed to export risk register: ${errorMessage}. Please try again.`, { id: toastId })
+    } finally {
+      setIsExporting(false)
     }
   }
 
@@ -339,6 +352,7 @@ export default function RiskRegister() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Toaster position="top-right" />
       <header className="bg-red-600 text-white py-6 shadow-lg">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center">
@@ -521,15 +535,17 @@ export default function RiskRegister() {
             <div className="flex gap-2">
               <button 
                 onClick={() => handleExport('csv')}
-                className="btn bg-green-600 hover:bg-green-700 text-white"
+                disabled={isExporting}
+                className={`btn bg-green-600 hover:bg-green-700 text-white ${isExporting ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                Export CSV
+                {isExporting ? 'Exporting...' : 'Export CSV'}
               </button>
               <button 
                 onClick={() => handleExport('xlsx')}
-                className="btn bg-blue-600 hover:bg-blue-700 text-white"
+                disabled={isExporting}
+                className={`btn bg-blue-600 hover:bg-blue-700 text-white ${isExporting ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                Export XLSX
+                {isExporting ? 'Exporting...' : 'Export XLSX'}
               </button>
             </div>
           </div>
