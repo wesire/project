@@ -43,7 +43,6 @@ export default function ProcurementPage() {
     
     setIsAuthenticated(true)
     setAuthLoading(false)
-    fetchProcurements()
   }, [])
 
   const handleLogin = () => {

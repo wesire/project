@@ -45,7 +45,6 @@ export default function RFIsPage() {
     
     setIsAuthenticated(true)
     setAuthLoading(false)
-    fetchRFIs()
   }, [])
 
   const handleLogin = () => {

@@ -43,7 +43,6 @@ export default function IssuesPage() {
     
     setIsAuthenticated(true)
     setAuthLoading(false)
-    fetchIssues()
   }, [])
 
   const handleLogin = () => {

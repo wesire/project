@@ -36,7 +36,6 @@ export default function CashflowPage() {
     
     setIsAuthenticated(true)
     setAuthLoading(false)
-    fetchCashflows()
   }, [])
 
   const handleLogin = () => {

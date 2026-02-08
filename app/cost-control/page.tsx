@@ -108,7 +108,6 @@ export default function CostControlPage() {
     
     setIsAuthenticated(true)
     setAuthLoading(false)
-    fetchProjects()
   }, [])
 
   const handleLogin = () => {
