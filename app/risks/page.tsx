@@ -221,7 +221,11 @@ export default function RiskRegister() {
 
   // Handle add risk
   const handleAddRisk = () => {
-    const riskNumber = `R${String(risks.length + 1).padStart(3, '0')}`
+    const maxRiskNum = risks.reduce((max, r) => {
+      const num = parseInt(r.riskNumber.substring(1), 10)
+      return isNaN(num) ? max : Math.max(max, num)
+    }, 0)
+    const riskNumber = `R${String(maxRiskNum + 1).padStart(3, '0')}`
     const score = (newRisk.probability || 1) * (newRisk.impact || 1)
     
     const risk: Risk = {
@@ -678,7 +682,10 @@ export default function RiskRegister() {
                       min="1"
                       max="5"
                       value={newRisk.probability}
-                      onChange={(e) => setNewRisk({ ...newRisk, probability: parseInt(e.target.value) })}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10)
+                        setNewRisk({ ...newRisk, probability: isNaN(val) ? 1 : val })
+                      }}
                       className="w-full p-2 border rounded"
                     />
                   </div>
@@ -690,7 +697,10 @@ export default function RiskRegister() {
                       min="1"
                       max="5"
                       value={newRisk.impact}
-                      onChange={(e) => setNewRisk({ ...newRisk, impact: parseInt(e.target.value) })}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10)
+                        setNewRisk({ ...newRisk, impact: isNaN(val) ? 1 : val })
+                      }}
                       className="w-full p-2 border rounded"
                     />
                   </div>
